@@ -1,0 +1,379 @@
+﻿@page "/encryption"
+@using CryptoApp.Client.Models;
+@using CryptoApp.Shared
+@using CryptoApp.Shared.Commands;
+@using Microsoft.AspNetCore.Authorization;
+@using MudBlazor
+@using System.Text;
+@using BlazorDownloadFile;
+@using CryptoApp.Client.Models.EncryptionModel;
+@attribute [Authorize]
+@inject HttpClient client
+@inject IBlazorDownloadFileService downloadService
+
+<div style="display: flex; justify-content: space-between; align-items: center;">
+    <h1>Encryption</h1>
+    <h1>Decryption</h1>
+</div>
+
+
+<div style="display: flex; justify-content: space-between;">
+    <div style="flex: 1; margin-right: 10px;">
+        <EditForm Model="EncryptionState" OnValidSubmit="EncryptData">
+            <DataAnnotationsValidator />
+            <MudCard Outlined="true" Style="padding: 16px;">
+                <MudSelect T="string" Label="Select Encryption algorithm" Variant="Variant.Outlined" ValueChanged="(string value) => OnAlgorithmChanged(value, true)">
+                    @foreach (var algo in EncryptionOptions.AvailableEncryptionAlgorithms)
+                    {
+                        <MudSelectItem Value="@algo">@algo</MudSelectItem>
+                    }
+                </MudSelect>
+                <ValidationMessage For="@(()=>EncryptionState.SelectedAlgorithm)"></ValidationMessage>
+
+                <div style="height: 20px;"></div>
+
+                <MudSelect T="string" Label="Select cipher mode" @bind-Value="EncryptionState.SelectedCipherMode" Variant="Variant.Outlined">
+                    @foreach (var mode in EncryptionState.SelectedAlgorithm == "DES"
+                    ? EncryptionOptions.AvailableCipherModes.SkipLast(1) : EncryptionOptions.AvailableCipherModes)
+                    {
+                        <MudSelectItem Value="@mode">@mode</MudSelectItem>
+                    }
+                </MudSelect>
+                <ValidationMessage For="@(()=>EncryptionState.SelectedCipherMode)"></ValidationMessage>
+
+                <div style="height: 20px;"></div>
+
+                <MudRadioGroup @bind-SelectedOption="EncryptionState.IsFile">
+                    <MudRadio Option="false" Color="Color.Primary">Text</MudRadio>
+                    <MudRadio Option="true" Color="Color.Primary">File</MudRadio>
+                </MudRadioGroup>
+
+                <div style="height: 20px;"></div>
+
+                @if (EncryptionState.IsFile)
+                {
+                    <div class="form-group mb-3">
+                        <label for="fileUpload" class="btn btn-primary">Upload File</label>
+                        <InputFile id="fileUpload" OnChange="(e) => OnFileChange(e,true)" style="display: none;"/>
+                        @if (!string.IsNullOrEmpty(EncryptionState.UploadedFileName))
+                        {
+                            <span class="ml-3">@EncryptionState.UploadedFileName</span>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <MudTextField @bind-Value="EncryptionState.Text" Lines="5" FullWidth="true" Variant="Variant.Outlined" Label="Input text"></MudTextField>
+                }
+                <ValidationMessage For="@(()=>EncryptionState.Text)"></ValidationMessage>
+                <ValidationMessage For="@(()=>EncryptionState.FileData)"></ValidationMessage>
+
+
+
+                <div style="height: 20px;"></div>
+                <MudTextField Label="Password" @bind-Value="EncryptionState.Password" Variant="Variant.Outlined" InputType="InputType.Password"></MudTextField>
+                <ValidationMessage For="@(()=>EncryptionState.Password)"></ValidationMessage>
+
+                <div style="height: 20px;"></div>
+
+                <MudButton Disabled="@EncryptLoadingState" ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="mr-3">
+                    @if (EncryptLoadingState)
+                    {
+                        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                        <span>Processing</span>
+                    }
+                    else
+                    {
+                        <span>Encrypt Data</span>
+                    }
+                </MudButton>
+                <MudButton OnClick="() => ClearData(true)" Variant="Variant.Filled" Color="Color.Error">Clear data</MudButton>
+            
+
+                <div style="height: 20px;"></div>
+
+                @if (EncryptionState.EncryptedData is not null)
+                {
+                    <div>
+                        <MudText Typo="Typo.h6">Encrypted data:</MudText>
+                        @if (EncryptionState.IsFile)
+                        {
+                            <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="DownloadEncryptedData">Download Encrypted Data</MudButton>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body1" Class="text-break" Style="background-color: #f5f5f5; padding: 10px; border-radius: 5px;">@Convert.ToBase64String(EncryptionState.EncryptedData)</MudText>
+                        }
+                    
+                    </div>
+                }
+
+            </MudCard>
+        </EditForm>
+    </div>
+
+    <div style="flex: 1; margin-left: 10px;">
+        <MudCard Outlined="true" Style="padding: 16px;">
+            <EditForm Model="DecryptionState" OnValidSubmit="DecryptData">
+                <DataAnnotationsValidator />
+                
+                <MudSelect T="string" Label="Select Decryption algorithm" Variant="Variant.Outlined" ValueChanged="(string value) => OnAlgorithmChanged(value, false)">
+                    @foreach (var algo in EncryptionOptions.AvailableEncryptionAlgorithms)
+                    {
+                        <MudSelectItem Value="@algo">@algo</MudSelectItem>
+                    }
+                </MudSelect>
+                <ValidationMessage For="@(()=>DecryptionState.SelectedAlgorithm)"></ValidationMessage>
+
+
+                <div style="height: 20px;"></div>
+
+                <MudSelect T="string" Label="Select cipher mode" @bind-Value="DecryptionState.SelectedCipherMode" Variant="Variant.Outlined">
+                    @foreach (var mode in DecryptionState.SelectedAlgorithm == "DES"
+                    ? EncryptionOptions.AvailableCipherModes.SkipLast(1) : EncryptionOptions.AvailableCipherModes)
+                    {
+                        <MudSelectItem Value="@mode">@mode</MudSelectItem>
+                    }
+                </MudSelect>
+                <ValidationMessage For="@(()=>DecryptionState.SelectedCipherMode)"></ValidationMessage>
+
+            
+                <div style="height: 20px;"></div>
+
+                <MudRadioGroup @bind-SelectedOption="DecryptionState.IsFile">
+                    <MudRadio Option="false" Color="Color.Primary">Text</MudRadio>
+                    <MudRadio Option="true" Color="Color.Primary">File</MudRadio>
+                </MudRadioGroup>
+
+                <div style="height: 20px;"></div>
+
+                @if (DecryptionState.IsFile)
+                {
+                    <div class="form-group mb-3">
+                        <label for="fileUpload2" class="btn btn-primary">Upload Encrypted File</label>
+                        <InputFile id="fileUpload2" OnChange="(e) => OnFileChange(e, false)" style="display: none;"/>
+                        @if (!string.IsNullOrEmpty(DecryptionState.UploadedFileName))
+                        {
+                            <span class="ml-3">@DecryptionState.UploadedFileName</span>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <MudTextField @bind-Value="DecryptionState.EncryptedText" Lines="5" FullWidth="true" Variant="Variant.Outlined" Label="Input encrypted text (base64)"></MudTextField>
+                }
+                <ValidationMessage For="@(()=>DecryptionState.EncryptedFile)"></ValidationMessage>
+                <ValidationMessage For="@(()=>DecryptionState.EncryptedText)"></ValidationMessage>
+
+
+                <div style="height: 20px;"></div>
+                <MudTextField Label="Password" @bind-Value="DecryptionState.Password" Variant="Variant.Outlined" InputType="InputType.Password"></MudTextField>
+                <ValidationMessage For="@(()=>DecryptionState.Password)"></ValidationMessage>
+
+                <div style="height: 20px;"></div>
+                <MudButton Disabled="@DecryptLoadingState" ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="mr-3">
+                    @if (DecryptLoadingState)
+                    {
+                        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                        <span>Processing</span>
+                    }
+                    else
+                    {
+                        <span>Decrypt Data</span>
+                    }
+                </MudButton>
+                <MudButton OnClick="() => ClearData(false)" Variant="Variant.Filled" Color="Color.Error">Clear data</MudButton>
+
+
+                <div style="height: 20px;"></div>
+
+                @if (DecryptionState.DecryptedData is not null)
+                {
+                    <div>
+                        <MudText Typo="Typo.h6">Decrypted data result:</MudText>
+                        @if(!DecryptionFailed)
+                        {
+                            @if (DecryptionState.IsFile)
+                            {
+                                <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="DownloadDecryptedData">Download Decrypted Data</MudButton>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.body1" Class="text-break" Style="background-color: #f5f5f5; padding: 10px; border-radius: 5px;">
+                                    @Encoding.UTF8.GetString(DecryptionState.DecryptedData)
+                                </MudText>
+                            }
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body1" Class="text-break" Style="background-color: #f5f5f5; padding: 10px; border-radius: 5px;">
+                                Decryption failed. Please check your file and your input data
+                            </MudText>
+                        }
+                        
+
+                    </div>
+                }
+            </EditForm>
+
+        </MudCard>
+    </div>
+
+</div>
+
+<MudMessageBox @ref="mbox" Title="@MessageBoxTitle">
+    <MessageContent>
+        @MessageBoxText
+    </MessageContent>
+</MudMessageBox>
+
+
+@code {
+    private EncryptionState EncryptionState = new();
+    private DecryptionState DecryptionState = new();
+    MudMessageBox mbox { get; set; }
+    private string MessageBoxText = string.Empty;
+    private string MessageBoxTitle = "Info";
+    private bool EncryptLoadingState = false;
+    private bool DecryptLoadingState = false;
+
+    private bool DecryptionFailed = false;
+
+    private async Task EncryptData()
+    {
+        EncryptLoadingState = true;
+        StateHasChanged();
+        EncryptionCommand command = new EncryptionCommand(
+            EncryptionState.SelectedAlgorithm,
+            EncryptionState.SelectedCipherMode,
+            EncryptionState.Password,
+            EncryptionState.IsFile ? EncryptionState.FileData : Encoding.Unicode.GetBytes(EncryptionState.Text)
+        );
+
+        var response = await client.PostAsJsonAsync("api/Crypto/encrypt", command);
+        if (response.IsSuccessStatusCode)
+        {
+            EncryptionState.EncryptedData = Convert.FromBase64String(await response.Content.ReadAsStringAsync());
+
+        }
+        else
+        {
+            MessageBoxText = $"{await response.Content.ReadAsStringAsync()}";
+            MessageBoxTitle = "Warning";
+            await mbox.Show();
+        }
+        command = null;
+        EncryptLoadingState = false;
+        StateHasChanged();
+
+    }
+
+    private async Task DecryptData()
+    {
+        DecryptLoadingState = true;
+        DecryptionFailed = false;
+        StateHasChanged();
+        DecryptionCommand command = new DecryptionCommand(
+
+                DecryptionState.SelectedAlgorithm,
+                DecryptionState.SelectedCipherMode,
+                DecryptionState.Password,
+                DecryptionState.IsFile ? DecryptionState.EncryptedFile : Convert.FromBase64String(DecryptionState.EncryptedText)
+        );
+
+        var response = await client.PostAsJsonAsync("api/Crypto/decrypt", command);
+        if(response.IsSuccessStatusCode)
+        {
+            MessageBoxTitle = "Success";
+
+            DecryptionState.DecryptedData = Convert.FromBase64String(await response.Content.ReadAsStringAsync());
+            MessageBoxText = "Decryption succeded";
+        }
+        else
+        {
+            DecryptionFailed = true;
+            MessageBoxText = $"{await response.Content.ReadAsStringAsync()}";
+            MessageBoxTitle = "Warning";
+            DecryptionState.DecryptedData = null;
+        }
+
+        DecryptLoadingState = false;
+        StateHasChanged();
+        await mbox.Show();
+
+
+        command = null;
+    }
+
+    private async Task DownloadEncryptedData()
+    {
+        string fileName = EncryptionState.UploadedFileName;
+        string fileExtension = EncryptionState.FileExtension;
+        await DownloadFileFromByteArray(EncryptionState.EncryptedData, $"{fileName}Encrypted", fileExtension);
+    }
+
+    private async Task DownloadDecryptedData()
+    {
+        string fileName = DecryptionState.UploadedFileName;
+        fileName = fileName.Replace("Encrypted", "Decrypted");
+        string fileExtension = DecryptionState.FileExtension;
+        await DownloadFileFromByteArray(DecryptionState.DecryptedData, $"{fileName}", fileExtension);
+    }
+
+    private async Task OnFileChange(InputFileChangeEventArgs e, bool encryption)
+    {
+        var file = e.File;
+        if (file != null)
+        {
+            using var memoryStream = new MemoryStream();
+            await file.OpenReadStream(50 * 1024 * 1024).CopyToAsync(memoryStream);
+
+            if(encryption)
+            {
+                EncryptionState.UploadedFileName = Path.GetFileNameWithoutExtension(file.Name);
+                EncryptionState.FileExtension = Path.GetExtension(file.Name);
+                EncryptionState.FileData = memoryStream.ToArray();
+            }
+            else
+            {
+                DecryptionState.UploadedFileName = Path.GetFileNameWithoutExtension(file.Name);
+                DecryptionState.FileExtension = Path.GetExtension(file.Name);
+                DecryptionState.EncryptedFile = memoryStream.ToArray();
+
+            }
+
+        }
+    }
+
+    private async Task DownloadFileFromByteArray(byte[] fileBytes, string fileName, string fileExtension)
+        => await downloadService.DownloadFile($"{fileName}{fileExtension}", fileBytes, "application/octet-stream");
+
+    private void OnAlgorithmChanged(string newAlgorithm, bool isEncryption)
+    {
+        if (isEncryption)
+        {
+            EncryptionState.SelectedAlgorithm = newAlgorithm;
+            EncryptionState.SelectedCipherMode = null;
+        }
+        else
+        {
+            DecryptionState.SelectedAlgorithm = newAlgorithm;
+            DecryptionState.SelectedCipherMode = null;
+        }
+    }
+
+    private void ClearData(bool encryption)
+    {
+        if(encryption)
+        {
+            EncryptionState = new();
+        }
+        else
+        {
+            DecryptionState = new();
+        }
+
+    }
+
+    
+}

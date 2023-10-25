@@ -1,0 +1,123 @@
+﻿@page "/hash"
+@using CryptoApp.Client.Models;
+@using CryptoApp.Client.Models.HashModel;
+@using CryptoApp.Shared
+@using System.Text
+@using CryptoApp.Shared.Commands;
+@using Microsoft.AspNetCore.Authorization;
+@using MudBlazor
+@using System.ComponentModel.DataAnnotations 
+@attribute [Authorize]
+@inject HttpClient client
+
+<PageTitle>Hashing Data</PageTitle>
+
+<h1>Hash Data</h1>
+
+
+
+        <MudCard Outlined="true" Style="padding: 16px;">
+            <EditForm Model="State" OnValidSubmit="GenerateHash">
+                <DataAnnotationsValidator />
+
+                <MudSelect T="string" Label="Select hashing algorithm" @bind-Value="State.SelectedAlgorithm" Variant="Variant.Outlined">
+                    @foreach (var algo in HashOptions.Algorithms)
+                    {
+                        <MudSelectItem Value="@algo">@algo</MudSelectItem>
+                    }
+                </MudSelect>
+                <ValidationMessage For="@(() => State.SelectedAlgorithm)"></ValidationMessage>
+
+                <div style="height: 20px;"></div>
+
+                <MudRadioGroup @bind-SelectedOption="State.IsFile">
+                    <MudRadio Option="false" Color="Color.Primary" @onchange="() => HandleSelectionChange(false)">Text</MudRadio>
+                    <MudRadio Option="true" Color="Color.Primary" @onchange="() => HandleSelectionChange(true)">File</MudRadio>
+                </MudRadioGroup>
+
+                <div style="height: 20px;"></div>
+
+                @if (State.IsFile)
+                {
+                    <div class="form-group mb-3">
+                        <label for="fileUpload" class="btn btn-primary">Upload File</label>
+                        <InputFile id="fileUpload" OnChange="OnFileChange" style="display: none;" />
+                        @if (!string.IsNullOrEmpty(UploadedFileName))
+                        {
+                            <span class="ml-3">@UploadedFileName</span>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <MudTextField @bind-Value="State.Text" Lines="5" FullWidth="true" Variant="Variant.Outlined" Label="Input text"></MudTextField>
+                }
+                <ValidationMessage For="@(() => State.FileData)"></ValidationMessage>
+                <ValidationMessage For="@(() => State.Text)"></ValidationMessage>
+
+                <div style="height: 20px;"></div>
+
+                <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="mr-3">Generate Hash</MudButton>
+                <MudButton OnClick="ClearHashData" Variant="Variant.Filled" Color="Color.Error">Clear data</MudButton>
+
+
+                <div style="height: 20px;"></div>
+
+                <MudText Typo="Typo.h6">Hash Result:</MudText>
+                <MudText Typo="Typo.body1" Class="text-break" Style="background-color: #f5f5f5; padding: 10px; border-radius: 5px;">@State.HashResult</MudText>
+
+            </EditForm>
+        </MudCard>
+
+
+@code {
+    private HashState State = new();
+    private string UploadedFileName;
+
+    private async Task GenerateHash()
+    {
+
+        var command = new HashCommand(
+
+                State.SelectedAlgorithm,
+                State.IsFile ? State.FileData : Encoding.UTF8.GetBytes(State.Text)
+        );
+
+        var response = await client.PostAsJsonAsync("api/Crypto/hash", command);
+        State.HashResult = await response.Content.ReadAsStringAsync();
+    }
+
+    private async Task OnFileChange(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file != null)
+        {
+            UploadedFileName = file.Name;
+            using var ms = new MemoryStream();
+            await file.OpenReadStream(50*1024*1024).CopyToAsync(ms);
+            State.FileData = ms.ToArray();
+        }
+    }
+
+    private void HandleSelectionChange(bool isFileSelected)
+    {
+        if (isFileSelected)
+        {
+            State.Text = string.Empty;
+        }
+        else
+        {
+            State.FileData = null;
+            UploadedFileName = string.Empty;
+        }
+
+        State.IsFile = isFileSelected;
+    }
+
+    private void ClearHashData()
+    {
+        State = new();
+    }
+
+    
+}

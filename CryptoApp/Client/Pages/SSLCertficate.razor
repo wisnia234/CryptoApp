@@ -1,0 +1,376 @@
+﻿@page "/sslcertficate"
+@using CryptoApp.Client.Models;
+@using CryptoApp.Client.Models.HashModel;
+@using CryptoApp.Client.Models.SignatureModel;
+@using CryptoApp.Shared
+@using CryptoApp.Shared.Commands;
+@using CryptoApp.Shared.DTOs;
+@using Microsoft.AspNetCore.Authorization;
+@using MudBlazor;
+@using System.Text;
+@using BlazorDownloadFile;
+@using CryptoApp.Client.Models.SSLCertModel;
+@attribute [Authorize]
+@inject HttpClient client
+@inject IBlazorDownloadFileService downloadService
+
+<h1>Create SSL Certificate</h1>
+
+<MudCard Outlined="true" Style="padding: 16px;">
+    <EditForm Model="State" OnValidSubmit="GenerateCert">
+        <DataAnnotationsValidator />
+
+        <MudCheckBox @bind-Checked="@State.IsCa" Label="Create CA Certficate" Color="Color.Primary" ></MudCheckBox>
+        <div style="height: 20px;"></div>
+
+        <MudTextField @bind-Value="State.Subject" FullWidth="true" Variant="Variant.Outlined" Label="Input Common Name (CN)"></MudTextField>
+        <ValidationMessage For="@(() => State.Subject)"></ValidationMessage>
+
+        <div style="height: 20px;"></div>
+
+        <MudGrid>
+            <MudItem xs="6" md="6">
+                <MudTextField @bind-Value="NameState.Organization" FullWidth="true" Variant="Variant.Outlined" Label="Input Organization (O)"></MudTextField>
+                <MudTextField @bind-Value="NameState.OrganizationalUnit" FullWidth="true" Variant="Variant.Outlined" Label="Input Organizational Unit (OU)"></MudTextField>
+                <MudTextField @bind-Value="NameState.Country" FullWidth="true" Variant="Variant.Outlined" Label="Input Country (C)"></MudTextField>
+            </MudItem>
+
+            <MudItem xs="6" md="6">
+                <MudTextField @bind-Value="NameState.StateOrProvince" FullWidth="true" Variant="Variant.Outlined" Label="Input State or Province (ST)"></MudTextField>
+                <MudTextField @bind-Value="NameState.Locality" FullWidth="true" Variant="Variant.Outlined" Label="Input Locality (L)"></MudTextField>
+                <MudTextField @bind-Value="NameState.EmailAddress" FullWidth="true" Variant="Variant.Outlined" Label="Input Email Address (E)"></MudTextField>
+            </MudItem>
+        </MudGrid>
+
+        <div style="height: 20px;"></div>
+        <MudGrid>
+            <MudItem xs="6" md="6">
+                <MudDatePicker Label="Select started date" Editable="true" @bind-Date="State.NotBefore" Placeholder="Select started date" Variant="Variant.Outlined" />
+                <ValidationMessage For="@(() => State.NotBefore)"></ValidationMessage>
+            </MudItem>
+
+            <MudItem xs="6" md="6">
+                <MudDatePicker Label="Select expiration date" Editable="true" @bind-Date="State.NotAfter" Placeholder="Select expiration date" Variant="Variant.Outlined" />
+                <ValidationMessage For="@(() => State.NotAfter)"></ValidationMessage>
+            </MudItem>
+        </MudGrid>
+
+        <div style="height: 20px;"></div>
+        <MudGrid>
+
+            <MudItem xs="6" md="6">
+                <MudSelect T="string" Label="Select asymetric algorithm" @bind-Value="State.AsymetricCipher" Variant="Variant.Outlined">
+                    @foreach (var algo in CertifcateOptions.AsymetricAlgorithms)
+                    {
+                        <MudSelectItem Value="@algo">@algo</MudSelectItem>
+                    }
+                </MudSelect>
+                <ValidationMessage For="@(() => State.AsymetricCipher)"></ValidationMessage>
+            </MudItem>
+
+            <MudItem xs="6" md="6">
+                <MudSelect T="string" Label="Select hashing algorithm" @bind-Value="State.HashAlgorithm" Variant="Variant.Outlined">
+                    @foreach (var algo in HashOptions.Algorithms.Skip(2))
+                    {
+                        <MudSelectItem Value="@algo">@algo</MudSelectItem>
+                    }
+                </MudSelect>
+                <ValidationMessage For="@(() => State.HashAlgorithm)"></ValidationMessage>
+            </MudItem>
+
+        </MudGrid>
+
+        
+        <div style="height: 20px;"></div>
+
+        @if (State.AsymetricCipher == "RSA")
+        {
+
+            <MudGrid>
+
+                <MudItem xs="6" md="6">
+                    <MudSelect T="int" Label="Select key size" @bind-Value="State.RSAKeySize" Variant="Variant.Outlined">
+                        @foreach (var size in SignatureOptions.AvailableRSAKeySizes)
+                        {
+                            <MudSelectItem Value="@size">@size bits</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <ValidationMessage For="@(() => State.RSAKeySize)"></ValidationMessage>
+
+                <MudItem xs="6" md="6">
+                    <MudSelect T="string" Label="Select RSA padding" @bind-Value="State.RSAPadding" Variant="Variant.Outlined">
+                        @foreach (var padding in SignatureOptions.RSAPadding)
+                        {
+                            <MudSelectItem Value="@padding">@padding</MudSelectItem>
+                        }
+                    </MudSelect>
+                    <ValidationMessage For="@(() => State.RSAPadding)"></ValidationMessage>
+                </MudItem>
+
+            </MudGrid>
+            
+        }
+        @if (State.AsymetricCipher == "ECDSA")
+        {
+            <MudSelect T="string" Label="Select ECC Curve" @bind-Value="State.ECCCurveName" Variant="Variant.Outlined">
+                @foreach (var curve in SignatureOptions.ECCCurveNamesList)
+                {
+                    <MudSelectItem Value="@curve">@curve</MudSelectItem>
+                }
+            </MudSelect>
+            <ValidationMessage For="@(() => State.ECCCurveName)"></ValidationMessage>
+        }
+
+        <div style="height: 20px;"></div>
+        <MudGrid>
+
+            <MudItem xs="6" md="6">
+                <MudSelect T="string" Label="Select key usages" MultiSelection="true" @bind-Value="value" @bind-SelectedValues="State.KeyUsageFlags" Variant="Variant.Outlined">
+                    @foreach (var key in CertifcateOptions.KeyUsages)
+                    {
+                        <MudSelectItem Value="@key">@key</MudSelectItem>
+                    }
+                </MudSelect>
+                <ValidationMessage For="@(() => State.KeyUsageFlags)"></ValidationMessage>
+                <MudCheckBox @bind-Checked="@State.IsKeyUsageFlagsCritical" Label="Critical key usage" Color="Color.Primary"></MudCheckBox>
+            </MudItem>
+
+            <MudItem xs="6" md="6">
+                <MudSelect T="string" Label="Select enhanced key usages" MultiSelection="true" @bind-Value="value" @bind-SelectedValues="State.EnhancedKeyUsageExtensions" Variant="Variant.Outlined">
+                    @foreach (var key in CertifcateOptions.EnhancedKeyUsageFlags)
+                    {
+                        <MudSelectItem Value="@key">@key</MudSelectItem>
+                    }
+                </MudSelect>
+
+                <MudCheckBox @bind-Checked="@State.EnhancedKeyUsageExtensionsCritical" Label="Critical enhanced key usage" Color="Color.Primary"></MudCheckBox>
+            </MudItem>
+        </MudGrid>
+
+        <div style="height: 20px;"></div>
+        <MudSwitch Color="Color.Primary" @bind-Checked=@(EnableSigningCertificate) Label="Sign Certificate" />
+
+        @if (EnableSigningCertificate == true)
+        {
+            <div style="height: 20px;"></div>
+            <div class="form-group mb-3">
+                <label for="fileUpload" class="btn btn-primary">Upload Certificate</label>
+                <InputFile id="fileUpload" OnChange="OnSignCertChange" style="display: none;" accept=".der,.pfx,.p12,.cer"/>
+                @if (!string.IsNullOrEmpty(State.UploadedCertificateName))
+                {
+                    <span class="ml-3">@State.UploadedCertificateName</span>
+                }
+            </div>
+
+            @if (State.UploadedCertificateExtension == ".pfx" || State.UploadedCertificateExtension == ".p12")
+            {
+                <MudTextField Label="Issuer Certificate Password" @bind-Value="State.IssuerCertificatePassword" Variant="Variant.Outlined" InputType="InputType.Password"></MudTextField>
+                <ValidationMessage For="@(() => State.UserCerificatePassword)"></ValidationMessage>
+            }
+            else
+            {
+                @if (!string.IsNullOrEmpty(State.UploadedCertificateExtension))
+                {
+                    <div style="height: 20px;"></div>
+                    <div class="form-group mb-3">
+                        <label for="fileUpload2" class="btn btn-primary">Upload Private Key (.pem)</label>
+                        <InputFile id="fileUpload2" OnChange="OnPrivateKey" style="display: none;" accept=".pem"/>
+                        @if (!string.IsNullOrEmpty(State.UploadedPrivateKeyFileName))
+                        {
+                            <span class="ml-3">@State.UploadedPrivateKeyFileName</span>
+                        }
+                    </div>
+                    <ValidationMessage For="@(() => State.IssuerPrivateKey)"></ValidationMessage>
+
+
+                }
+                
+            }
+
+        }
+    
+    
+        <div style="height: 20px;"></div>
+        <MudGrid>
+
+            <MudItem xs="6" md="6">
+                <MudTextField @bind-Value="FileName" FullWidth="true" Variant="Variant.Outlined" Label="Input certificate file name"></MudTextField>
+            </MudItem>
+
+            <MudItem xs="6" md="6">
+                <MudSelect T="string" Label="Select certificate file extension" @bind-Value="State.CertificateExtension"  Variant="Variant.Outlined">
+                    @foreach (var ext in CertifcateOptions.CertificateExtensions)
+                    {
+                        <MudSelectItem Value="@ext">@ext</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+
+        </MudGrid>
+
+        @if(State.CertificateExtension == ".pfx" || State.CertificateExtension == ".p12")
+        {
+             <MudTextField Label="Password" @bind-Value="State.UserCerificatePassword" Variant="Variant.Outlined" InputType="InputType.Password"></MudTextField>
+                <ValidationMessage For="@(() => State.UserCerificatePassword)"></ValidationMessage>
+        }
+
+        <div style="height: 20px;"></div>
+        <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="mr-3">Generate Certificate</MudButton>
+
+        <MudButton OnClick="ClearCertificateData" Variant="Variant.Filled" Color="Color.Error" Class="mr-3">Clear data</MudButton>
+
+            @if (CreatingSuccesful)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Success" OnClick="DownloadCert" EndIcon="@Icons.Material.Filled.ArrowDownward"  Class="mr-3">Download Certificate</MudButton>
+            }       
+
+     </EditForm>
+</MudCard>
+
+<MudMessageBox @ref="mbox" Title="@MessageBoxTitle">
+    <MessageContent>
+        @MessageBoxText
+    </MessageContent>
+</MudMessageBox>
+
+@code{
+    private CertificateState State = new();
+    private X500NameState NameState = new();
+    MudMessageBox mbox { get; set; }
+    private bool EnableSigningCertificate = false;
+    private string MessageBoxText = "Info";
+    private string MessageBoxTitle = string.Empty;
+    private string value { get; set; } = "Nothing selected";
+    private bool CreatingSuccesful { get; set; } = false;
+    private string FileName = string.Empty;
+
+    private async Task OnSignCertChange(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file != null)
+        {
+            using var memoryStream = new MemoryStream();
+            await file.OpenReadStream().CopyToAsync(memoryStream);
+
+            State.UploadedCertificateName = file.Name;
+            State.UploadedCertificateExtension = Path.GetExtension(file.Name);
+            State.SigningCertificateData = memoryStream.ToArray();
+
+            if (State.UploadedCertificateExtension.Equals(".pfx") 
+                || State.UploadedCertificateExtension.Equals(".p12"))
+            {
+                State.IssuerPrivateKey = Enumerable.Empty<byte>().ToArray();
+            }
+            else
+            {
+                State.IssuerCertificatePassword = string.Empty;
+            }
+        }
+    }
+
+    private async Task OnPrivateKey(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file != null)
+        {
+            using var memoryStream = new MemoryStream();
+            await file.OpenReadStream().CopyToAsync(memoryStream);
+
+            State.UploadedPrivateKeyFileName = file.Name;
+            State.IssuerPrivateKey = memoryStream.ToArray();
+
+        }
+    }
+
+    private string GenerateX500Name()
+    {
+        List<string> parts = new List<string>
+        {
+            $"CN={State.Subject}",
+            !string.IsNullOrWhiteSpace(NameState.Organization) ? $"O={NameState.Organization}" : string.Empty,
+            !string.IsNullOrWhiteSpace(NameState.OrganizationalUnit) ? $"OU={NameState.OrganizationalUnit}" : string.Empty,
+            !string.IsNullOrWhiteSpace(NameState.Country) ? $"C={NameState.Country}" : string.Empty,
+            !string.IsNullOrWhiteSpace(NameState.StateOrProvince) ? $"ST={NameState.StateOrProvince}" : string.Empty,
+            !string.IsNullOrWhiteSpace(NameState.Locality) ? $"L={NameState.Locality}" : string.Empty,
+            !string.IsNullOrWhiteSpace(NameState.EmailAddress) ? $"E={NameState.EmailAddress}" : string.Empty
+        };
+
+        var list = parts;
+
+        parts.RemoveAll(string.IsNullOrEmpty);
+
+        return string.Join("," ,parts);
+    }
+
+
+    private void ClearCertificateData()
+    {
+        State = new();
+        NameState = new();
+        FileName = string.Empty;
+        CreatingSuccesful = false;
+        EnableSigningCertificate = false;
+    }
+
+
+    private async Task GenerateCert()
+    {
+        CreatingSuccesful = false;
+        StateHasChanged();
+        var name = GenerateX500Name();
+        var command = new CertificateCommand
+        (
+           name,
+           State.IsCa,
+           (DateTime)State.NotBefore,
+           (DateTime)State.NotAfter,
+           State.AsymetricCipher,
+           State.HashAlgorithm,
+           State.RSAPadding,
+           State.ECCCurveName,
+           State.RSAKeySize,
+           State.KeyUsageFlags.ToList(),
+           State.IsKeyUsageFlagsCritical,
+           State.EnhancedKeyUsageExtensions.ToList(),
+           State.EnhancedKeyUsageExtensionsCritical,
+           State.CertificateExtension,
+           State.UserCerificatePassword,
+           State.IssuerCertificatePassword,
+
+           State.SigningCertificateData,
+           State.IssuerPrivateKey
+        );
+
+
+        var response = await client.PostAsJsonAsync("api/Crypto/certificate", command);
+        if(response.IsSuccessStatusCode)
+        {
+            CreatingSuccesful = true;
+            var result = await response.Content.ReadFromJsonAsync<CertificateAndKeyDTO>();
+            State.CertificateData = result.Certificate;
+            State.PrivateKeyData = result.PrivateKey;
+            MessageBoxText = "The certificate has been created successfully";
+        }
+        else
+        {
+            MessageBoxText = await response.Content.ReadAsStringAsync();
+        }
+
+        StateHasChanged();
+        await mbox.Show();
+
+
+    }
+
+    private async Task DownloadCert()
+    {
+        var name = string.IsNullOrEmpty(FileName) ? $"{State.Subject}certificate" : FileName;
+        await DownloadFileFromByteArray(State.CertificateData, $"{name}{State.CertificateExtension}");
+        await DownloadFileFromByteArray(State.PrivateKeyData, $"{name}privateKey.pem");
+    }
+
+    private async Task DownloadFileFromByteArray(byte[] fileBytes, string fileName) 
+        => await downloadService.DownloadFile(fileName, fileBytes, "application/octet-stream");
+}
+

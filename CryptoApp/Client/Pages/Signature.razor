@@ -1,0 +1,432 @@
+﻿@page "/signature"
+@using CryptoApp.Client.Models;
+@using CryptoApp.Shared;
+@using System.Text;
+@using CryptoApp.Shared.Commands;
+@using CryptoApp.Shared.DTOs;
+@using Microsoft.AspNetCore.Authorization;
+@using MudBlazor
+@using BlazorDownloadFile;
+@using CryptoApp.Client.Models.SignatureModel;
+@attribute [Authorize]
+@inject HttpClient client
+@inject IBlazorDownloadFileService downloadService
+
+<div style="display: flex; justify-content: space-between; align-items: center;">
+    <h1>Digital Signature</h1>
+    <h1>Verify Signature</h1>
+</div>
+
+
+<div style="display: flex; justify-content: space-between;">
+    <div style="flex: 1; margin-right: 10px;">
+        <MudCard Outlined="true" Style="padding: 16px;">
+            <EditForm Model="SignatureState" OnValidSubmit="GenerateSignatureAndKeys">
+                <DataAnnotationsValidator />
+
+                <MudSelect T="string" Label="Select signing algorithm" ValueChanged="OnAlgorithmChanged" Variant="Variant.Outlined">
+                    @foreach (var algo in SignatureOptions.AvailableSigningAlgorithms)
+                    {
+                        <MudSelectItem Value="@algo">@algo</MudSelectItem>
+                    }
+                </MudSelect>
+                <ValidationMessage For="@(() => SignatureState.SelectedAlgorithm)"></ValidationMessage>
+
+                @if (SignatureState.SelectedAlgorithm != "ECDSA")
+                {
+            
+                    <div style="height: 20px;"></div>
+
+                    <MudSelect T="int" Label="Select key size" @bind-Value="SignatureState.KeySize" Variant="Variant.Outlined">
+                        @foreach (var size in SignatureState.SelectedAlgorithm != "DSA"
+                       ? SignatureOptions.AvailableRSAKeySizes : SignatureOptions.AvailableDSAKeySizes)
+                        {
+                            <MudSelectItem Value="@size">@size bits</MudSelectItem>
+                        }
+                    </MudSelect>
+                    <ValidationMessage For="@(() => SignatureState.KeySize)"></ValidationMessage>
+
+
+
+                    @if (SignatureState.SelectedAlgorithm == "RSA")
+                    {
+                        <div style="height: 20px;"></div>
+                        <MudSelect T="string" Label="Select RSA padding" @bind-Value="SignatureState.SelectedRSAPadding" Variant="Variant.Outlined">
+                            @foreach (var padding in SignatureOptions.RSAPadding)
+                            {
+                                <MudSelectItem Value="@padding">@padding</MudSelectItem>
+                            }
+                        </MudSelect>
+                        <ValidationMessage For="@(() => SignatureState.SelectedRSAPadding)"></ValidationMessage>
+                    }
+                }
+                @if (SignatureState.SelectedAlgorithm == "ECDSA")
+                {
+                    <div style="height: 20px;"></div>
+                    <MudSelect T="string" Label="Select ECC Curve" @bind-Value="SignatureState.SelectedECCCurveName" Variant="Variant.Outlined">
+                        @foreach (var curve in SignatureOptions.ECCCurveNamesList)
+                        {
+                            <MudSelectItem Value="@curve">@curve</MudSelectItem>
+                        }
+                    </MudSelect>
+                    <ValidationMessage For="@(() => SignatureState.SelectedECCCurveName)"></ValidationMessage>
+
+                }
+
+                <div style="height: 20px;"></div>
+
+                <MudSelect T="string" Label="Select hashing algorithm" @bind-Value="SignatureState.SelectedHashingAlgorithm" Variant="Variant.Outlined">
+                    @foreach (var hash in SignatureOptions.AvailableHashingAlgorithms)
+                    {
+                        <MudSelectItem Value="@hash">@hash</MudSelectItem>
+                    }
+                </MudSelect>
+                <ValidationMessage For="@(() => SignatureState.SelectedHashingAlgorithm)"></ValidationMessage>
+
+                <div style="height: 20px;"></div>
+
+                <MudRadioGroup @bind-SelectedOption="SignatureState.IsFile">
+                    <MudRadio Option="false" Color="Color.Primary">Text</MudRadio>
+                    <MudRadio Option="true" Color="Color.Primary">File</MudRadio>
+                </MudRadioGroup>
+
+                <div style="height: 20px;"></div>
+
+                @if (SignatureState.IsFile)
+                {
+                    <div class="form-group mb-3">
+                        <label for="fileUpload" class="btn btn-primary">Upload File</label>
+                        <InputFile id="fileUpload" OnChange="OnFileSignatureChange" style="display: none;" />
+                        @if (!string.IsNullOrEmpty(SignatureState.UploadedFileName))
+                        {
+                            <span class="ml-3">@SignatureState.UploadedFileName</span>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <MudTextField @bind-Value="SignatureState.Text" Lines="5" FullWidth="true" Variant="Variant.Outlined" Label="Input text"></MudTextField>
+                }
+                <ValidationMessage For="@(() => SignatureState.FileData)"></ValidationMessage>
+                <ValidationMessage For="@(() => SignatureState.Text)"></ValidationMessage>
+
+                <div style="height: 20px;"></div>
+
+                <div style="display: flex; align-items: center;">
+                    <MudButton Disabled="@SigningLoadingState" ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="mr-3">
+                        @if (SigningLoadingState)
+                        {
+                            <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                            <span>Processing</span>
+                        }
+                        else
+                        {
+                            <span>Generate Signature</span>
+                        }
+                    </MudButton>
+
+                    @if (!string.IsNullOrEmpty(SignatureState.PublicKey) && !string.IsNullOrEmpty(SignatureState.PrivateKey))
+                    {
+                        <MudButton Variant="Variant.Filled" Color="Color.Success" OnClick="DownloadKeys" Class="mr-3">Download Keys</MudButton>
+                    }
+                    <MudButton OnClick="() => ClearData(true)" Variant="Variant.Filled" Color="Color.Error">Clear data</MudButton>
+                </div>
+
+                <div style="height: 20px;"></div>
+
+                @if (!string.IsNullOrEmpty(SignatureState.Signature))
+                {
+                    <div>
+                        <MudText Typo="Typo.h6">Generated Signature:</MudText>
+                        <MudText Typo="Typo.body1" Class="text-break" Style="background-color: #f5f5f5; padding: 10px; border-radius: 5px;">@SignatureState.Signature</MudText>
+                    </div>
+                }
+            </EditForm>
+        </MudCard>
+    </div>
+
+    <div style="flex: 1; margin-left: 10px;">
+    <MudCard Outlined="true" Style="padding: 16px;">
+            <EditForm Model="Verification" OnValidSubmit="VerifySignature">
+                <DataAnnotationsValidator />
+
+            <MudSelect T="string" Label="Select verification algorithm" @bind-Value="Verification.SelectedAlgorithm" Variant="Variant.Outlined">
+                @foreach (var algo in SignatureOptions.AvailableSigningAlgorithms)
+                {
+                    <MudSelectItem Value="@algo">@algo</MudSelectItem>
+                }
+            </MudSelect>
+            <ValidationMessage For="@(() => Verification.SelectedAlgorithm)"></ValidationMessage>
+
+
+        <div style="height: 20px;"></div>
+
+            <MudSelect T="string" Label="Select hashing algorithm" @bind-Value="Verification.SelectedHashingAlgorithm" Variant="Variant.Outlined">
+                @foreach (var hash in SignatureOptions.AvailableHashingAlgorithms)
+                {
+                    <MudSelectItem Value="@hash">@hash</MudSelectItem>
+                }
+            </MudSelect>
+            <ValidationMessage For="@(() => Verification.SelectedHashingAlgorithm)"></ValidationMessage>
+
+        <div style="height: 20px;"></div>
+
+        @if (Verification.SelectedAlgorithm == "RSA")
+        {
+                <MudSelect T="string" Label="Select RSA padding" @bind-Value="Verification.SelectedRSAPadding" Variant="Variant.Outlined">
+                    @foreach (var padding in SignatureOptions.RSAPadding)
+                {
+                    <MudSelectItem Value="@padding">@padding</MudSelectItem>
+                }
+            </MudSelect>
+            <ValidationMessage For="@(() => Verification.SelectedRSAPadding)"></ValidationMessage>
+        }
+
+        <div style="height: 20px;"></div>
+
+        <div class="form-group mb-3">
+            <label for="publicKeyUpload" class="btn btn-primary">Upload Public Key (.pem)</label>
+            <InputFile id="publicKeyUpload" OnChange="OnPublicKeyChange" style="display: none;" accept=".pem"/>
+            @if (!string.IsNullOrEmpty(Verification.UploadedPublicKeyName))
+            {
+                <span class="ml-3">@Verification.UploadedPublicKeyName</span>
+            }
+            else
+            {
+                <span class="ml-3">Key is empty</span>
+            }
+        </div>
+            <ValidationMessage For="@(() => Verification.PublicKeyData)"></ValidationMessage>
+
+        <div style="height: 10px;"></div>
+            <MudTextField @bind-Value="Verification.UserSignature" Lines="5" FullWidth="true" Variant="Variant.Outlined" Label="Input digital signature (Base64)"></MudTextField>
+            <ValidationMessage For="@(() => Verification.UserSignature)"></ValidationMessage>
+            <div style="height: 20px;"></div>
+
+            <MudRadioGroup @bind-SelectedOption="Verification.IsFile">
+                <MudRadio Option="false" Color="Color.Primary">Text</MudRadio>
+                <MudRadio Option="true" Color="Color.Primary">File</MudRadio>
+            </MudRadioGroup>
+
+        <div style="height: 20px;"></div>
+
+        @if (Verification.IsFile)
+        {
+            <div class="form-group mb-3">
+                <label for="verificationFileUpload" class="btn btn-primary">Upload File</label>
+                <InputFile id="verificationFileUpload" OnChange="OnVerificationFileChange" style="display: none;" />
+                @if (!string.IsNullOrEmpty(Verification.UploadedVerificationFileName))
+                {
+                        <span class="ml-3">@Verification.UploadedVerificationFileName</span>
+                }
+            </div>
+            
+        }
+        else
+        {
+                <MudTextField @bind-Value="Verification.Text" Lines="5" FullWidth="true" Variant="Variant.Outlined" Label="Input text"></MudTextField>
+        }
+                <ValidationMessage For="@(() => Verification.FileData)"></ValidationMessage>
+                <ValidationMessage For="@(() => Verification.Text)"></ValidationMessage>
+
+        <div style="height: 20px;"></div>
+
+                <div style="display: flex; align-items: center;">
+                    <MudButton Disabled="@VerficationLoadingState" ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="mr-3">
+                        @if (VerficationLoadingState)
+                        {
+                            <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                            <span>Processing</span>
+                        }
+                        else
+                        {
+                            <span>Verify Signature</span>
+                        }
+                    </MudButton>
+
+                    <MudButton OnClick="() => ClearData(false)" Variant="Variant.Filled" Color="Color.Error">Clear data</MudButton>
+                </div>
+                @if (Verification.VerificationStatus != null)
+                {
+                    <div style="height: 20px;"></div>
+                    <div>
+                        <MudText Typo="Typo.h6">Verification Result:</MudText>
+                        <MudText Color="@VerificationColor" Typo="Typo.body1">@Verification.VerificationStatus</MudText>
+                    </div>
+                }
+
+        </EditForm>
+    </MudCard>
+
+        <MudMessageBox @ref="mbox" Title="@MessageBoxTitle">
+            <MessageContent>
+                @MessageBoxText
+            </MessageContent>
+        </MudMessageBox>
+</div>
+
+</div>
+
+
+@code {
+    MudMessageBox mbox { get; set; }
+    private SignatureState SignatureState = new();
+    private VerificationState Verification = new();
+    private string MessageBoxText = string.Empty;
+    private string MessageBoxTitle = string.Empty;
+    private Color VerificationColor;
+    private bool SigningLoadingState = false;
+    private bool VerficationLoadingState = false;
+
+    private async Task GenerateSignatureAndKeys()
+    {
+        SigningLoadingState = true;
+        ResetSignatureResult();
+        StateHasChanged();
+        var command = new SignatureCommand(
+
+                SignatureState.SelectedAlgorithm,
+                SignatureState.KeySize,
+                SignatureState.SelectedRSAPadding,
+                SignatureState.SelectedECCCurveName,
+                SignatureState.SelectedHashingAlgorithm,
+                SignatureState.IsFile ? SignatureState.FileData : Encoding.UTF8.GetBytes(SignatureState.Text)
+        );
+
+        var response = await client.PostAsJsonAsync("api/Crypto/sign", command);
+        if (response.IsSuccessStatusCode)
+        {
+            var result = await response.Content.ReadFromJsonAsync<SignatureAndKeysDTO>();
+            SignatureState.Signature = Encoding.UTF8.GetString(result.Signature);
+            SignatureState.PublicKey = Encoding.UTF8.GetString(result.PublicKey);
+            SignatureState.PrivateKey = Encoding.UTF8.GetString(result.PrivateKey);
+        }
+        else
+        {
+            MessageBoxTitle = "Warning";
+            MessageBoxText = "There was an internal error. Please check if you provided correct data";
+            await mbox.Show();
+        }
+        SigningLoadingState = false;
+        StateHasChanged();
+        command = null;
+    }
+
+    private void ResetSignatureResult()
+    {
+        SignatureState.Signature = string.Empty;
+        SignatureState.PublicKey = string.Empty;
+        SignatureState.PrivateKey = string.Empty;
+    }
+
+    private async Task DownloadKeys()
+    {
+        await DownloadFileFromByteArray(Encoding.UTF8.GetBytes(SignatureState.PublicKey), $"{SignatureState.SelectedAlgorithm}PublicKey");
+        await DownloadFileFromByteArray(Encoding.UTF8.GetBytes(SignatureState.PrivateKey), $"{SignatureState.SelectedAlgorithm}PrivateKey");
+    }
+
+    private async Task OnFileSignatureChange(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file != null)
+        {
+
+            SignatureState.UploadedFileName = file.Name;
+            using var ms = new MemoryStream();
+            await file.OpenReadStream(50*1024*1024).CopyToAsync(ms);
+            SignatureState.FileData = ms.ToArray();
+        }
+
+    }
+    private async Task OnPublicKeyChange(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file != null)
+        {
+            Verification.UploadedPublicKeyName = file.Name;
+            using var ms = new MemoryStream();
+            await file.OpenReadStream(50 * 1024 * 1024).CopyToAsync(ms);
+            Verification.PublicKeyData = Encoding.UTF8.GetString(ms.ToArray());
+        }
+    }
+
+    private async Task OnVerificationFileChange(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file != null)
+        {
+            Verification.UploadedVerificationFileName = file.Name;
+            using var ms = new MemoryStream();
+            await file.OpenReadStream(50 * 1024 * 1024).CopyToAsync(ms);
+            Verification.FileData = ms.ToArray();
+        }
+    }
+
+    private async Task VerifySignature()
+    {
+        VerficationLoadingState = true;
+        var command = new VerificationCommand(
+
+                Verification.IsFile ? Verification.FileData : Encoding.UTF8.GetBytes(Verification.Text),
+                Verification.SelectedAlgorithm,
+                Verification.UserSignature,
+                Verification.SelectedHashingAlgorithm,
+                Verification.PublicKeyData,
+                Verification.SelectedRSAPadding
+        );
+
+        var response = await client.PostAsJsonAsync("api/Crypto/verify", command);
+        if (response.IsSuccessStatusCode)
+        {
+            var result = await response.Content.ReadFromJsonAsync<bool>();
+            VerificationColor = result ? Color.Success : Color.Error;
+            Verification.VerificationStatus = result ? "Verfication succeeded" : "Verification failed";
+            StateHasChanged();
+            MessageBoxText = Verification.VerificationStatus;
+        }
+        else
+        {
+            VerificationColor = Color.Error;
+            var errorResponse = await response.Content.ReadAsStringAsync();
+            Verification.VerificationStatus = errorResponse;
+            StateHasChanged();
+            MessageBoxTitle = "Warning";
+            MessageBoxText = errorResponse;
+
+        }
+        VerficationLoadingState = false;
+        await mbox.Show();
+        command = null;
+    }
+
+    private async Task DownloadFileFromByteArray(byte[] fileBytes, string fileName)
+        => await downloadService.DownloadFile($"{fileName}.pem", fileBytes, "application/octet-stream");
+
+
+    private void OnAlgorithmChanged(string newAlgorithm)
+    {
+        SignatureState.SelectedAlgorithm = newAlgorithm;
+        SignatureState.KeySize = 2048;
+    }
+
+    private void ClearData(bool isSigning)
+    {
+        if(isSigning)
+        {
+            SignatureState = new();
+        }
+        else
+        {
+            Verification = new();
+        }
+        ResetLoadingState();
+    }
+
+    private void ResetLoadingState()
+    {
+        SigningLoadingState = false;
+        VerficationLoadingState = false;
+    }
+
+
+}
