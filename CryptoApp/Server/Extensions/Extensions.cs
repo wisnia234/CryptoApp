@@ -16,7 +16,6 @@ internal static class Extensions
         services.AddScoped<IHashService, HashService>();
         return services;
     }
-
     public static WebApplication AddWebApplication(this WebApplication app)
     {
         app.UseMiddleware<ExceptionMiddleware>();

@@ -29,20 +29,13 @@ internal static class CertificateServiceUtills
         return certificate;
     }
 
-    public static byte[] ExportCertificate(X509Certificate2 certificate, string certExtension, string? password)
+    public static byte[] ExportCertificate(X509Certificate2 certificate, string certExtension, string? password) => certExtension switch
     {
-        if (certExtension.Equals(".pem"))
-        {
-            return Encoding.UTF8.GetBytes(certificate.ExportCertificatePem());
-        }
-        else if (certExtension.Equals(".pfx") || certExtension.Equals(".p12"))
-        {
-            return certificate.Export(GetCertificateContentType(certExtension), password);
-        }
+        ".pem" => Encoding.UTF8.GetBytes(certificate.ExportCertificatePem()),
+        ".pfx" or ".p12" => certificate.Export(GetCertificateContentType(certExtension), password),
+        _ => certificate.Export(GetCertificateContentType(certExtension))
+    };
 
-        return certificate.Export(GetCertificateContentType(certExtension));
-
-    }
 
     public static OidCollection GetOIDsCollection(IEnumerable<string> enhancedKeyUsages)
     {
