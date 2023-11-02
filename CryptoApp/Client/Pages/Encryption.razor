@@ -71,7 +71,9 @@
 
 
                 <div style="height: 20px;"></div>
-                <MudTextField Label="Password" @bind-Value="EncryptionState.Password" Variant="Variant.Outlined" InputType="InputType.Password"></MudTextField>
+                <MudTextField Label="Password" @bind-Value="EncryptionState.Password" Variant="Variant.Outlined"
+                              InputType="@EncryptionInputType" Adornment="Adornment.End"
+                              AdornmentIcon="@EncryptionPasswordIcon" OnAdornmentClick="e => TogglePasswordVisibility(true)"></MudTextField>
                 <ValidationMessage For="@(()=>EncryptionState.Password)"></ValidationMessage>
 
                 <div style="height: 20px;"></div>
@@ -167,7 +169,10 @@
 
 
                 <div style="height: 20px;"></div>
-                <MudTextField Label="Password" @bind-Value="DecryptionState.Password" Variant="Variant.Outlined" InputType="InputType.Password"></MudTextField>
+@*                 <MudTextField Label="Password" @bind-Value="DecryptionState.Password" Variant="Variant.Outlined" InputType="InputType.Password"></MudTextField>
+ *@                <MudTextField Label="Password" @bind-Value="DecryptionState.Password" Variant="Variant.Outlined"
+                              InputType="@DecryptionInputType" Adornment="Adornment.End"
+                              AdornmentIcon="@DecryptionPasswordIcon" OnAdornmentClick="e => TogglePasswordVisibility(false)"></MudTextField>
                 <ValidationMessage For="@(()=>DecryptionState.Password)"></ValidationMessage>
 
                 <div style="height: 20px;"></div>
@@ -371,6 +376,43 @@
         else
         {
             DecryptionState = new();
+        }
+
+    }
+
+    private string EncryptionPasswordIcon = Icons.Material.Filled.VisibilityOff; 
+    private string DecryptionPasswordIcon = Icons.Material.Filled.VisibilityOff;
+    private InputType EncryptionInputType = InputType.Password; 
+    private InputType DecryptionInputType = InputType.Password;
+
+
+    private void TogglePasswordVisibility(bool isEncryption)
+    {
+        if(isEncryption)
+        {
+            if (EncryptionInputType == InputType.Password)
+            {
+                EncryptionInputType = InputType.Text;
+                EncryptionPasswordIcon = Icons.Material.Filled.Visibility; 
+            }
+            else
+            {
+                EncryptionInputType = InputType.Password;
+                EncryptionPasswordIcon = Icons.Material.Filled.VisibilityOff; 
+            }
+        }
+        else
+        {
+            if (DecryptionInputType == InputType.Password)
+            {
+                DecryptionInputType = InputType.Text;
+                DecryptionPasswordIcon = Icons.Material.Filled.Visibility; 
+            }
+            else
+            {
+                DecryptionInputType = InputType.Password;
+                DecryptionPasswordIcon = Icons.Material.Filled.VisibilityOff; 
+            }
         }
 
     }
