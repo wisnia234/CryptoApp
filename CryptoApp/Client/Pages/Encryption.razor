@@ -169,8 +169,7 @@
 
 
                 <div style="height: 20px;"></div>
-@*                 <MudTextField Label="Password" @bind-Value="DecryptionState.Password" Variant="Variant.Outlined" InputType="InputType.Password"></MudTextField>
- *@                <MudTextField Label="Password" @bind-Value="DecryptionState.Password" Variant="Variant.Outlined"
+              <MudTextField Label="Password" @bind-Value="DecryptionState.Password" Variant="Variant.Outlined"
                               InputType="@DecryptionInputType" Adornment="Adornment.End"
                               AdornmentIcon="@DecryptionPasswordIcon" OnAdornmentClick="e => TogglePasswordVisibility(false)"></MudTextField>
                 <ValidationMessage For="@(()=>DecryptionState.Password)"></ValidationMessage>

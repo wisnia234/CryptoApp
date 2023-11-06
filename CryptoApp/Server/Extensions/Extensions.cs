@@ -1,9 +1,13 @@
-﻿using CryptoApp.Server.Data;
+﻿using CryptoApp.Server.AppOptions;
+using CryptoApp.Server.Data;
+using CryptoApp.Server.Email;
 using CryptoApp.Server.Middleware;
 using CryptoApp.Server.Models;
 using CryptoApp.Server.Services;
 using CryptoApp.Server.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
 
@@ -11,6 +15,26 @@ namespace CryptoApp.Server.Extensions;
 
 internal static class Extensions
 {
+    public static IServiceCollection AddServerExtensions(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddCryptoServices();
+        services.AddDbContext(configuration);
+        services.AddIdentity();
+        services.AddEmail(configuration);
+
+        services.AddControllersWithViews();
+        services.AddRazorPages();
+        return services;
+    }
+
+    public static T GetOptions<T>(this IConfiguration configuration, string sectionName) where T : class, new()
+    {
+        var options = new T();
+        var section = configuration.GetRequiredSection(sectionName);
+        section.Bind(options);
+
+        return options;
+    }
     private static IServiceCollection AddCryptoServices(this IServiceCollection services)
     {
         services.AddScoped<IEncryptionService, EncryptionService>();
@@ -21,25 +45,19 @@ internal static class Extensions
         return services;
     }
 
-    public static IServiceCollection AddServerExtensions(this IServiceCollection services, IConfiguration configuration)
+    private static IServiceCollection AddEmail(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddCryptoServices();
-        services.AddDbAndIdentity(configuration);
-
+        services.Configure<EmailOptions>(configuration.GetRequiredSection("EmailSettings"));
+        services.AddTransient<IEmailSender, EmailSender>();
         return services;
     }
 
-    private static IServiceCollection AddDbAndIdentity(this IServiceCollection services, IConfiguration configuration)
+    private static IServiceCollection AddIdentity(this IServiceCollection services)
     {
-        var connectionString = configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-        services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseSqlServer(connectionString));
-        services.AddDatabaseDeveloperPageExceptionFilter();
         services.AddDefaultIdentity<ApplicationUser>(options =>
         {
-            options.SignIn.RequireConfirmedAccount = false;
-            options.User.RequireUniqueEmail = false;
+            options.SignIn.RequireConfirmedAccount = true;
+            options.User.RequireUniqueEmail = true;
             options.Password.RequiredLength = 10;
         })
             .AddEntityFrameworkStores<ApplicationDbContext>();
@@ -50,8 +68,18 @@ internal static class Extensions
         services.AddAuthentication()
             .AddIdentityServerJwt();
 
-        services.AddControllersWithViews();
-        services.AddRazorPages();
+        return services;
+    }
+
+    private static IServiceCollection AddDbContext(this IServiceCollection services, IConfiguration configuration)
+    {
+        var connectionString = configuration.GetConnectionString("DefaultConnection")
+        ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+
+        services.AddDbContext<ApplicationDbContext>(options =>
+            options.UseSqlServer(connectionString));
+        services.AddDatabaseDeveloperPageExceptionFilter();
+        
         return services;
     }
     public static WebApplication AddWebApplication(this WebApplication app)
