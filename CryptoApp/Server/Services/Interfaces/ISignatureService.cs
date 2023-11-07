@@ -3,8 +3,7 @@ using CryptoApp.Shared.DTOs;
 
 namespace CryptoApp.Server.Services.Interfaces;
 
-public
-    interface ISignatureService
+public interface ISignatureService
 {
     SignatureAndKeysDTO GenerateSignature(SignatureCommand command);
     bool VerifySignature(VerificationCommand command);

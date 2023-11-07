@@ -97,7 +97,7 @@ public class RegisterModel : PageModel
 
 
                 await _emailSender.SendEmailAsync(Input.Email, "CryptoApp email confirmation",
-                        $"Potwierdź swój adres e-mail, klikając <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>tutaj</a>.");
+                        $"Please verify your account by clicking <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>here</a>.");
 
 
                 return RedirectToPage("RegisterConfirmation", new { email = Input.Email, returnUrl = returnUrl });

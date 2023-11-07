@@ -19,7 +19,7 @@ internal class EmailSender : IEmailSender
         string emailSender = _emailOptions.FromAddress;
         string password = _emailOptions.FromPassword;
 
-        var smtp = new SmtpClient
+        SmtpClient smtp = new()
         {
             Host = "smtp.gmail.com",
             Port = 587,

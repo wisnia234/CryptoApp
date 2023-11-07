@@ -19,97 +19,100 @@ internal class EncryptionService : IEncryptionService
         byte[] salt = CryptoServiceUtills.GenerateSaltBytes(128);
         byte[] plainBytes = command.ContentData;
 
-        using Rfc2898DeriveBytes pdb = new Rfc2898DeriveBytes(command.Password, salt, 100_000, HashAlgorithmName.SHA256);
+        using Rfc2898DeriveBytes rfcDeriveBytes = new(command.Password, salt, 100_000, HashAlgorithmName.SHA256);
         using SymmetricAlgorithm symmetricAlgorithm = EncryptionServiceUtils.CreateSymmetricAlgorithm(command.Algorithm);
 
         if (command.Algorithm.Equals("AES"))
         {
             symmetricAlgorithm.KeySize = 256;
         }
-        symmetricAlgorithm.Key = pdb.GetBytes(symmetricAlgorithm.KeySize / 8);
+        symmetricAlgorithm.Key = rfcDeriveBytes.GetBytes(symmetricAlgorithm.KeySize / 8);
         symmetricAlgorithm.GenerateIV();
         symmetricAlgorithm.Mode = EncryptionServiceUtils.GetCipherModeFromString(command.CipherMode);
         symmetricAlgorithm.Padding = PaddingMode.PKCS7;
 
         
-        using MemoryStream ms = new MemoryStream();
-        using CryptoStream cs = new CryptoStream(ms, symmetricAlgorithm.CreateEncryptor(), CryptoStreamMode.Write);
+        using MemoryStream ms = new();
+        using CryptoStream cs = new(ms, symmetricAlgorithm.CreateEncryptor(), CryptoStreamMode.Write);
         cs.Write(plainBytes, 0, plainBytes.Length);
         cs.FlushFinalBlock();
-        byte[] cipherBytes = ms.ToArray();
+        byte[] encryptedBytes = ms.ToArray();
 
         HMACSHA512 hmac = new(symmetricAlgorithm.Key);
-        byte[] saltedCipherBytes = new byte[salt.Length + symmetricAlgorithm.IV.Length + cipherBytes.Length];
+        byte[] saltIVCipherBytes = new byte[salt.Length + symmetricAlgorithm.IV.Length + encryptedBytes.Length];
 
-        Array.Copy(salt, 0, saltedCipherBytes, 0, salt.Length);
-        Array.Copy(symmetricAlgorithm.IV, 0, saltedCipherBytes, salt.Length, symmetricAlgorithm.IV.Length);
-        Array.Copy(cipherBytes, 0, saltedCipherBytes, symmetricAlgorithm.IV.Length + salt.Length, cipherBytes.Length);
+        Array.Copy(salt, 0, saltIVCipherBytes, 0, salt.Length);
+        Array.Copy(symmetricAlgorithm.IV, 0, saltIVCipherBytes, salt.Length, symmetricAlgorithm.IV.Length);
+        Array.Copy(encryptedBytes, 0, saltIVCipherBytes, symmetricAlgorithm.IV.Length + salt.Length, encryptedBytes.Length);
 
 
-        byte[] hmacHash = hmac.ComputeHash(saltedCipherBytes);
-        byte[] resultWithHMAC = new byte[saltedCipherBytes.Length + hmacHash.Length];
+        byte[] hmacEncryption = hmac.ComputeHash(saltIVCipherBytes);
+        byte[] finalResult = new byte[saltIVCipherBytes.Length + hmacEncryption.Length];
 
-        Array.Copy(saltedCipherBytes, 0, resultWithHMAC, 0, saltedCipherBytes.Length);
-        Array.Copy(hmacHash, 0, resultWithHMAC, saltedCipherBytes.Length, hmacHash.Length);
+        Array.Copy(saltIVCipherBytes, 0, finalResult, 0, saltIVCipherBytes.Length);
+        Array.Copy(hmacEncryption, 0, finalResult, saltIVCipherBytes.Length, hmacEncryption.Length);
         symmetricAlgorithm.Clear();
 
-        return Convert.ToBase64String(resultWithHMAC);
+        return Convert.ToBase64String(finalResult);
      }
 
     private string DecryptData(BaseEncryptionCommand command)
     {
-        byte[] resultWithHmac = command.ContentData;
-        byte[] hmacHash = new byte[64];
+        byte[] userCryptogram = command.ContentData;
+        byte[] userHMAC = new byte[64];
 
-        Array.Copy(resultWithHmac, resultWithHmac.Length - 64, hmacHash, 0, hmacHash.Length);
-        byte[] saltedCipherBytes = new byte[resultWithHmac.Length - 64];
-        Array.Copy(resultWithHmac, 0, saltedCipherBytes, 0, resultWithHmac.Length - 64);
+        Array.Copy(userCryptogram, userCryptogram.Length - 64, userHMAC, 0, userHMAC.Length);
+        byte[] saltIVEncryptedBytes = new byte[userCryptogram.Length - 64];
+        Array.Copy(userCryptogram, 0, saltIVEncryptedBytes, 0, userCryptogram.Length - 64);
 
 
         byte[] salt = new byte[128];
         byte[] iv = new byte[EncryptionServiceUtils.GetSymetricAlgorithmIVSize(command.Algorithm)];
-        byte[] cipherBytes = new byte[saltedCipherBytes.Length - iv.Length - salt.Length];
+        byte[] dataToDecrypt = new byte[saltIVEncryptedBytes.Length - iv.Length - salt.Length];
 
-        Array.Copy(saltedCipherBytes, 0, salt, 0, salt.Length);
-        Array.Copy(saltedCipherBytes, salt.Length, iv, 0, iv.Length);
-        Array.Copy(saltedCipherBytes, salt.Length + iv.Length, cipherBytes, 0, saltedCipherBytes.Length - salt.Length - iv.Length);
-        using Rfc2898DeriveBytes pdb = new Rfc2898DeriveBytes(command.Password, salt, 100_000, HashAlgorithmName.SHA256);
+        Array.Copy(saltIVEncryptedBytes, 0, salt, 0, salt.Length);
+        Array.Copy(saltIVEncryptedBytes, salt.Length, iv, 0, iv.Length);
+        Array.Copy(saltIVEncryptedBytes, salt.Length + iv.Length, dataToDecrypt, 0, saltIVEncryptedBytes.Length - salt.Length - iv.Length);
+        using Rfc2898DeriveBytes rfcDeriveBytes = new(command.Password, salt, 100_000, HashAlgorithmName.SHA256);
         using SymmetricAlgorithm symmetricAlgorithm = EncryptionServiceUtils.CreateSymmetricAlgorithm(command.Algorithm);
 
         if (command.Algorithm.Equals("AES"))
         {
             symmetricAlgorithm.KeySize = 256;
         }
-        symmetricAlgorithm.Key = pdb.GetBytes(symmetricAlgorithm.KeySize / 8);
+        symmetricAlgorithm.Key = rfcDeriveBytes.GetBytes(symmetricAlgorithm.KeySize / 8);
         symmetricAlgorithm.IV = iv;
         symmetricAlgorithm.Padding = PaddingMode.PKCS7;
         symmetricAlgorithm.Mode = EncryptionServiceUtils.GetCipherModeFromString(command.CipherMode);
 
-        HMACSHA512 hMACSHA512 = new(symmetricAlgorithm.Key);
-        byte[] messageHash = hMACSHA512.ComputeHash(saltedCipherBytes);
-        if (!HashCompare(hmacHash, messageHash))
+        HMACSHA512 userCryptogramHMAC = new(symmetricAlgorithm.Key);
+        byte[] messageHash = userCryptogramHMAC.ComputeHash(saltIVEncryptedBytes);
+
+        if (!HashCompare(userHMAC, messageHash))
         {
             throw new Exception("Wrong password");
         }
+
         byte[] result;
         try
         {
-            using MemoryStream ms = new MemoryStream();
-            using CryptoStream cs = new CryptoStream(ms, symmetricAlgorithm.CreateDecryptor(), CryptoStreamMode.Write);
-            cs.Write(cipherBytes, 0, cipherBytes.Length);
+            using MemoryStream ms = new();
+            using CryptoStream cs = new(ms, symmetricAlgorithm.CreateDecryptor(), CryptoStreamMode.Write);
+            cs.Write(dataToDecrypt, 0, dataToDecrypt.Length);
             cs.FlushFinalBlock();
             result = ms.ToArray();
             symmetricAlgorithm.Clear();
         }
         catch(CryptographicException)
         {
-            throw new Exception("Error, please check if you provided correct algorithm o cipher mode");
+            throw new Exception("Error, please check if you provided correct algorithm or cipher mode");
         }
 
         return Convert.ToBase64String(result);
     }
 
-    private bool HashCompare(byte[] hash1, byte[] hash2) => hash1.SequenceEqual(hash2);
+    private bool HashCompare(byte[] hash1, byte[] hash2) 
+        => hash1.SequenceEqual(hash2);
 
 
 }
