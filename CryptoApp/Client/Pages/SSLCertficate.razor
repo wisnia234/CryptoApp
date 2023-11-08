@@ -149,9 +149,9 @@
         </MudGrid>
 
         <div style="height: 20px;"></div>
-        <MudSwitch Color="Color.Primary" @bind-Checked=@(EnableSigningCertificate) Label="Sign Certificate" />
+        <MudSwitch Color="Color.Primary" @bind-Checked=@(State.EnableSigningCertificate) Label="Sign Certificate" />
 
-        @if (EnableSigningCertificate == true)
+        @if (State.EnableSigningCertificate == true)
         {
             <div style="height: 20px;"></div>
             <div class="form-group mb-3">
@@ -310,7 +310,7 @@
         NameState = new();
         FileName = string.Empty;
         CreatingSuccesful = false;
-        EnableSigningCertificate = false;
+        State.EnableSigningCertificate = false;
     }
 
 

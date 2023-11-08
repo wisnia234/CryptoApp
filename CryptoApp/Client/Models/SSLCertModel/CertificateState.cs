@@ -34,17 +34,22 @@ internal class CertificateState
     public string CertificateExtension { get; set; } = ".der";
 
     public string UserCerificatePassword { get; set; }
-    public string UploadedCertificateName {  get; set; }
+    public string UploadedCertificateName { get; set; }
     public string UploadedCertificateExtension { get; set; }
     public byte[] SigningCertificateData { get; set; }
 
     public string IssuerCertificatePassword { get; set; }
-    [RequiredIfSelectedProperty(nameof(CertificateExtension), ".der", ".pem", ".cer",ErrorMessage = "Issuer private key is required")]
-
+    /*[RequiredIfSelectedProperty(nameof(CertificateExtension), ".der", ".pem", ".cer", ErrorMessage = "Issuer private key is required")]*/
+    
+    [RequirePrivateKey(nameof(EnableSigningCertificate), true,
+        nameof(CertificateExtension), ".der", ".pem", ".cer", 
+        ErrorMessage = "Issuer private key is required")]
     public byte[] IssuerPrivateKey { get; set; }
     public string UploadedPrivateKeyFileName { get; set; }
 
 
     public byte[] PrivateKeyData { get; set; }
     public byte[] CertificateData { get; set;}
+
+    public bool EnableSigningCertificate { get; set; } = false;
 }
