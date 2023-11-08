@@ -1,4 +1,5 @@
-﻿using System.Security.Cryptography;
+﻿using CryptoApp.Server.Exceptions;
+using System.Security.Cryptography;
 
 namespace CryptoApp.Server.Utils;
 
@@ -15,14 +16,14 @@ internal static class EncryptionServiceUtils
     {
         "AES" => 16,
         "DES" or "3DES" => 8,
-        _ => throw new Exception("Provided algorithm does not exist")
+        _ => throw new AlgorithmNotExist(algorithm)
     };
     public static SymmetricAlgorithm CreateSymmetricAlgorithm(string algorithm) => algorithm.ToUpper() switch
     {
         "AES" => Aes.Create(),
         "DES" => DES.Create(),
         "3DES" => TripleDES.Create(),
-        _ => throw new NotImplementedException()
+        _ => throw new AlgorithmNotExist(algorithm)
     };
 
 }

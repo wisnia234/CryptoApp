@@ -1,4 +1,5 @@
-﻿using CryptoApp.Server.Services.Interfaces;
+﻿using CryptoApp.Server.Exceptions;
+using CryptoApp.Server.Services.Interfaces;
 using CryptoApp.Server.Utils;
 using CryptoApp.Shared.Commands;
 using System.Security.Cryptography;
@@ -86,11 +87,11 @@ internal class EncryptionService : IEncryptionService
         symmetricAlgorithm.Mode = EncryptionServiceUtils.GetCipherModeFromString(command.CipherMode);
 
         HMACSHA512 userCryptogramHMAC = new(symmetricAlgorithm.Key);
-        byte[] messageHash = userCryptogramHMAC.ComputeHash(saltIVEncryptedBytes);
+        byte[] verificationHash = userCryptogramHMAC.ComputeHash(saltIVEncryptedBytes);
 
-        if (!HashCompare(userHMAC, messageHash))
+        if (!HashCompare(userHMAC, verificationHash))
         {
-            throw new Exception("Wrong password");
+            throw new WrongPasswordException();
         }
 
         byte[] result;
@@ -105,7 +106,7 @@ internal class EncryptionService : IEncryptionService
         }
         catch(CryptographicException)
         {
-            throw new Exception("Error, please check if you provided correct algorithm or cipher mode");
+            throw new EncryptionException();
         }
 
         return Convert.ToBase64String(result);

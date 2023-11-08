@@ -72,29 +72,29 @@ public class CryptoController : ControllerBase
     [HttpPost("encrypt")]
     public ActionResult<string> EncryptData([FromBody] EncryptionCommand command)
     {
-        try
-        {
+       /* try
+        {*/
             string result = _encryptionService.SymetricAlgorithmOperation(command);
             return Ok(result);
-        }
+        /*}
         catch (Exception ex)
         {
             return BadRequest(ex.Message);
-        }
+        }*/
     }
 
     [HttpPost("decrypt")]
     public ActionResult<string> DecryptData([FromBody] DecryptionCommand command)
     {
-        try
-        {
+       /* try
+        {*/
             string result = _encryptionService.SymetricAlgorithmOperation(command);
             return Ok(result);
-        }
+        /*}
         catch (Exception ex)
         {
             return BadRequest(ex.Message);
-        }
+        }*/
     }
 
     [HttpPost("certificate")]

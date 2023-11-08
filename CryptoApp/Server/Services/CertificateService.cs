@@ -4,6 +4,7 @@ using CryptoApp.Shared.DTOs;
 using System.Security.Cryptography.X509Certificates;
 using CryptoApp.Server.Services.Interfaces;
 using System.Text;
+using CryptoApp.Server.Exceptions;
 
 namespace CryptoApp.Server.Services;
 
@@ -37,7 +38,7 @@ internal class CertificateService : ICertificateService
             if(!string.IsNullOrEmpty(command.IssuerCertificatePassword) 
                 && command.IssuerPrivateKey.Length != 0)
             {
-                throw new Exception("Either the password or the private key can be used.");
+                throw new PasswordAndKeyProvidedException();
             }
 
 
@@ -55,7 +56,7 @@ internal class CertificateService : ICertificateService
             }
             else 
             {
-                throw new Exception("Password and private key were not provided");
+                throw new EmptyPasswordOrKeyException();
             }
 
             finalCertificate = certificateRequest.Create(issuerCertificate, notBeforer, notAfter, serialNumber);

@@ -59,6 +59,10 @@ internal static class Extensions
             options.SignIn.RequireConfirmedAccount = true;
             options.User.RequireUniqueEmail = true;
             options.Password.RequiredLength = 10;
+            options.Password.RequireUppercase = true;
+            options.Password.RequireLowercase = true;
+            options.Password.RequireNonAlphanumeric = true;
+            options.Password.RequireDigit = true;
         })
             .AddEntityFrameworkStores<ApplicationDbContext>();
 

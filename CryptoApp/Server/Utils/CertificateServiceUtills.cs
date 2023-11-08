@@ -2,6 +2,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using CryptoApp.Shared.Commands;
+using CryptoApp.Server.Exceptions;
 
 namespace CryptoApp.Server.Utils;
 
@@ -72,14 +73,14 @@ internal static class CertificateServiceUtills
         ".pfx" => X509ContentType.Pfx,
         ".p12" => X509ContentType.Pkcs12,
         ".cer" or ".der" or ".pem" => X509ContentType.Cert,
-        _ => throw new Exception("Invalid extension")
+        _ => throw new ExtensionNotExist(extension)
     };
 
     public static byte[] GetPrivateKeyFromCert(string algorithm, X509Certificate2 certificate) => algorithm switch
     {
         "RSA" => Encoding.UTF8.GetBytes(certificate.GetRSAPrivateKey().ExportRSAPrivateKeyPem()),
         "ECDSA" => Encoding.UTF8.GetBytes(certificate.GetECDsaPrivateKey().ExportECPrivateKeyPem()),
-        _ => throw new Exception("Provided algorithm does not exist")
+        _ => throw new AlgorithmNotExist(algorithm)
     };
 
 
@@ -104,7 +105,7 @@ internal static class CertificateServiceUtills
         }
         else
         {
-            throw new Exception("Asymetric Cipher algorithm does not exist");
+            throw new AlgorithmNotExist(command.AsymetricCipher);
         }
     }
 }

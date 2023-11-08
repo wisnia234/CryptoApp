@@ -1,4 +1,5 @@
 ﻿namespace CryptoApp.Server.Middleware;
+using CryptoApp.Server.Exceptions;
 
 internal sealed class ExceptionMiddleware : IMiddleware
 {
@@ -19,7 +20,13 @@ internal sealed class ExceptionMiddleware : IMiddleware
 
     private async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
-        context.Response.StatusCode = StatusCodes.Status400BadRequest;
-        await context.Response.WriteAsync(exception.Message);
+        var (statusCode, error) = exception switch
+        {
+            BaseException => (StatusCodes.Status400BadRequest, exception.Message),
+            _ => (StatusCodes.Status500InternalServerError, "There was an internal error.")
+        };
+
+        context.Response.StatusCode = statusCode;
+        await context.Response.WriteAsJsonAsync(error);
     }
 }
