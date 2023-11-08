@@ -166,7 +166,7 @@
             @if (State.UploadedCertificateExtension == ".pfx" || State.UploadedCertificateExtension == ".p12")
             {
                 <MudTextField Label="Issuer Certificate Password" @bind-Value="State.IssuerCertificatePassword" Variant="Variant.Outlined" InputType="InputType.Password"></MudTextField>
-                <ValidationMessage For="@(() => State.UserCerificatePassword)"></ValidationMessage>
+                <ValidationMessage For="@(() => State.IssuerCertificatePassword)"></ValidationMessage>
             }
             else
             {

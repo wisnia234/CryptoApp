@@ -2,7 +2,7 @@
 
 namespace CryptoApp.Client.CustomAttributes;
 
-public class RequirePrivateKeyAttribute : ValidationAttribute
+public class RequireIssuerKeyAttribute : ValidationAttribute
 {
     private readonly string _boolPropertyName;
     private readonly bool _requiredBool;
@@ -10,7 +10,7 @@ public class RequirePrivateKeyAttribute : ValidationAttribute
     private readonly string _propertyName;
     private readonly string[] _requiredValues;
 
-    public RequirePrivateKeyAttribute(string boolPropertyName, bool requiredBool, 
+    public RequireIssuerKeyAttribute(string boolPropertyName, bool requiredBool, 
         string stringPropertyName, params string[] requiredValues)
     {
         _boolPropertyName = boolPropertyName;
@@ -33,7 +33,7 @@ public class RequirePrivateKeyAttribute : ValidationAttribute
             if ((propertyStringValue is string selectedProperty && _requiredValues.Contains(selectedProperty))
                 && propertyBoolValue is bool boolSelectedProperty && _requiredBool == boolSelectedProperty)
             {
-                if (value is null /*|| string.IsNullOrWhiteSpace(value.ToString())*/)
+                if (value is null || string.IsNullOrWhiteSpace(value.ToString()))
                 {
                     return new ValidationResult(ErrorMessage, new[] { validationContext.MemberName });
                 }
