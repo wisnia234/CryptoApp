@@ -149,7 +149,7 @@
         </MudGrid>
 
         <div style="height: 20px;"></div>
-        <MudSwitch Color="Color.Primary" @bind-Checked=@(State.EnableSigningCertificate) Label="Sign Certificate" />
+        <MudSwitch Color="Color.Primary" @bind-Checked=@(State.EnableSigningCertificate) Label="Sign Certificate"/>
 
         @if (State.EnableSigningCertificate == true)
         {
@@ -273,6 +273,16 @@
         }
     }
 
+    private void OnEnableSignChange()
+    {
+        if(!State.EnableSigningCertificate)
+        {
+            State.IssuerCertificatePassword = null;
+            State.SigningCertificateData = null;
+            State.IssuerPrivateKey = null;
+        }
+    }
+
     private async Task OnPrivateKey(InputFileChangeEventArgs e)
     {
         var file = e.File;
@@ -358,8 +368,8 @@
     {
         CreatingSuccesful = false;
         StateHasChanged();
-        var name = GenerateX500Name();
-        var command = new CertificateCommand
+        string name = GenerateX500Name();
+        CertificateCommand command = new 
         (
            name,
            State.IsCa,
@@ -375,11 +385,10 @@
            State.EnhancedKeyUsageExtensions.ToList(),
            State.EnhancedKeyUsageExtensionsCritical,
            State.CertificateExtension,
-           State.UserCerificatePassword,
-           State.IssuerCertificatePassword,
-
-           State.SigningCertificateData,
-           State.IssuerPrivateKey
+           State.EnableSigningCertificate ? State.UserCerificatePassword : null,
+           State.EnableSigningCertificate ?  State.IssuerCertificatePassword : null,
+           State.EnableSigningCertificate ? State.SigningCertificateData : null,
+           State.EnableSigningCertificate ? State.IssuerPrivateKey : null
         );
 
 
