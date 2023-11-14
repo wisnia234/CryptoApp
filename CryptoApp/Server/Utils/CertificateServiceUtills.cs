@@ -30,6 +30,16 @@ internal static class CertificateServiceUtills
         return certificate;
     }
 
+    public static bool ValidateIssuerSubjectKeyTypes(CertificateRequest subjectRequest, X509Certificate issuer)
+    {
+        Oid subjectAlgorithmOID = new(subjectRequest.PublicKey.Oid);
+        Oid issuerAlgorithmOID = new(issuer.GetKeyAlgorithm());
+
+        bool result = string.Equals(issuerAlgorithmOID.FriendlyName, subjectAlgorithmOID.FriendlyName);
+
+        return result;
+    }
+
     public static byte[] ExportCertificate(X509Certificate2 certificate, string certExtension, string? password) => certExtension switch
     {
         ".pem" => Encoding.UTF8.GetBytes(certificate.ExportCertificatePem()),
