@@ -66,6 +66,7 @@ internal class EncryptionService : IEncryptionService
         byte[] saltIVEncryptedBytes = new byte[userCryptogram.Length - 64];
         Array.Copy(userCryptogram, 0, saltIVEncryptedBytes, 0, userCryptogram.Length - 64);
 
+        CryptographicOperations.ZeroMemory(command.ContentData);
 
         byte[] salt = new byte[128];
         byte[] iv = new byte[EncryptionServiceUtils.GetSymetricAlgorithmIVSize(command.Algorithm)];

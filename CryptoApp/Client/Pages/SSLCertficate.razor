@@ -165,7 +165,9 @@
 
             @if (State.UploadedCertificateExtension == ".pfx" || State.UploadedCertificateExtension == ".p12")
             {
-                <MudTextField Label="Issuer Certificate Password" @bind-Value="State.IssuerCertificatePassword" Variant="Variant.Outlined" InputType="InputType.Password"></MudTextField>
+                <MudTextField Label="Password" @bind-Value="State.IssuerCertificatePassword" Variant="Variant.Outlined"
+                              InputType="@IssuerInputType" Adornment="Adornment.End"
+                              AdornmentIcon="@IssuerPasswordIcon" OnAdornmentClick="e => TogglePasswordVisibility(false)"></MudTextField>
                 <ValidationMessage For="@(() => State.IssuerCertificatePassword)"></ValidationMessage>
             }
             else
@@ -211,8 +213,10 @@
 
         @if(State.CertificateExtension == ".pfx" || State.CertificateExtension == ".p12")
         {
-             <MudTextField Label="Password" @bind-Value="State.UserCerificatePassword" Variant="Variant.Outlined" InputType="InputType.Password"></MudTextField>
-                <ValidationMessage For="@(() => State.UserCerificatePassword)"></ValidationMessage>
+            <MudTextField Label="Password" @bind-Value="State.UserCerificatePassword" Variant="Variant.Outlined"
+                          InputType="@UserInputType" Adornment="Adornment.End"
+                          AdornmentIcon="@UserPasswordIcon" OnAdornmentClick="e => TogglePasswordVisibility(true)"></MudTextField>
+            <ValidationMessage For="@(() => State.UserCerificatePassword)"></ValidationMessage>                
         }
 
         <div style="height: 20px;"></div>
@@ -313,6 +317,42 @@
         State.EnableSigningCertificate = false;
     }
 
+    private string UserPasswordIcon = Icons.Material.Filled.VisibilityOff;
+    private string IssuerPasswordIcon = Icons.Material.Filled.VisibilityOff;
+    private InputType UserInputType = InputType.Password;
+    private InputType IssuerInputType = InputType.Password;
+
+
+    private void TogglePasswordVisibility(bool isUser)
+    {
+        if (isUser)
+        {
+            if (UserInputType == InputType.Password)
+            {
+                UserInputType = InputType.Text;
+                UserPasswordIcon = Icons.Material.Filled.Visibility;
+            }
+            else
+            {
+                UserInputType = InputType.Password;
+                UserPasswordIcon = Icons.Material.Filled.VisibilityOff;
+            }
+        }
+        else
+        {
+            if (IssuerInputType == InputType.Password)
+            {
+                IssuerInputType = InputType.Text;
+                IssuerPasswordIcon = Icons.Material.Filled.Visibility;
+            }
+            else
+            {
+                IssuerInputType = InputType.Password;
+                IssuerPasswordIcon = Icons.Material.Filled.VisibilityOff;
+            }
+        }
+
+    }
 
     private async Task GenerateCert()
     {
