@@ -12,18 +12,15 @@
 @inject HttpClient client
 @inject IBlazorDownloadFileService downloadService
 
-<div style="display: flex; justify-content: space-between; align-items: center;">
-    <h1>Digital Signature</h1>
-    <h1>Verify Signature</h1>
-</div>
+
 
 
 <div style="display: flex; justify-content: space-between;">
     <div style="flex: 1; margin-right: 10px;">
-        <MudCard Outlined="true" Style="padding: 16px;">
+        <MudPaper Class="p-4" Elevation="3">
             <EditForm Model="SignatureState" OnValidSubmit="GenerateSignatureAndKeys">
                 <DataAnnotationsValidator />
-
+                <h1>Digital Signature</h1>
                 <MudSelect T="string" Label="Select signing algorithm" ValueChanged="OnAlgorithmChanged" Variant="Variant.Outlined">
                     @foreach (var algo in SignatureOptions.AvailableSigningAlgorithms)
                     {
@@ -142,121 +139,122 @@
                     </div>
                 }
             </EditForm>
-        </MudCard>
+        </MudPaper>
     </div>
 
     <div style="flex: 1; margin-left: 10px;">
-    <MudCard Outlined="true" Style="padding: 16px;">
-            <EditForm Model="Verification" OnValidSubmit="VerifySignature">
-                <DataAnnotationsValidator />
+    <MudPaper Class="p-4" Elevation="3">
+                <EditForm Model="Verification" OnValidSubmit="VerifySignature">
+                    <DataAnnotationsValidator />
 
-            <MudSelect T="string" Label="Select verification algorithm" @bind-Value="Verification.SelectedAlgorithm" Variant="Variant.Outlined">
-                @foreach (var algo in SignatureOptions.AvailableSigningAlgorithms)
+                <h1>Verify Signature</h1>
+                <MudSelect T="string" Label="Select verification algorithm" @bind-Value="Verification.SelectedAlgorithm" Variant="Variant.Outlined">
+                    @foreach (var algo in SignatureOptions.AvailableSigningAlgorithms)
+                    {
+                        <MudSelectItem Value="@algo">@algo</MudSelectItem>
+                    }
+                </MudSelect>
+                <ValidationMessage For="@(() => Verification.SelectedAlgorithm)"></ValidationMessage>
+
+
+              <div style="height: 20px;"></div>
+
+                <MudSelect T="string" Label="Select hashing algorithm" @bind-Value="Verification.SelectedHashingAlgorithm" Variant="Variant.Outlined">
+                    @foreach (var hash in SignatureOptions.AvailableHashingAlgorithms)
+                    {
+                        <MudSelectItem Value="@hash">@hash</MudSelectItem>
+                    }
+                </MudSelect>
+                <ValidationMessage For="@(() => Verification.SelectedHashingAlgorithm)"></ValidationMessage>
+
+              <div style="height: 20px;"></div>
+
+                @if (Verification.SelectedAlgorithm == "RSA")
                 {
-                    <MudSelectItem Value="@algo">@algo</MudSelectItem>
+                        <MudSelect T="string" Label="Select RSA padding" @bind-Value="Verification.SelectedRSAPadding" Variant="Variant.Outlined">
+                            @foreach (var padding in SignatureOptions.RSAPadding)
+                        {
+                            <MudSelectItem Value="@padding">@padding</MudSelectItem>
+                        }
+                    </MudSelect>
+                    <ValidationMessage For="@(() => Verification.SelectedRSAPadding)"></ValidationMessage>
                 }
-            </MudSelect>
-            <ValidationMessage For="@(() => Verification.SelectedAlgorithm)"></ValidationMessage>
 
+             <div style="height: 20px;"></div>
 
-        <div style="height: 20px;"></div>
+                <div class="form-group mb-3">
+                    <label for="publicKeyUpload" class="btn btn-primary">Upload Public Key (.pem)</label>
+                    <InputFile id="publicKeyUpload" OnChange="OnPublicKeyChange" style="display: none;" accept=".pem"/>
+                    @if (!string.IsNullOrEmpty(Verification.UploadedPublicKeyName))
+                    {
+                        <span class="ml-3">@Verification.UploadedPublicKeyName</span>
+                    }
+                    else
+                    {
+                        <span class="ml-3">Key is empty</span>
+                    }
+                </div>
+                <ValidationMessage For="@(() => Verification.PublicKeyData)"></ValidationMessage>
 
-            <MudSelect T="string" Label="Select hashing algorithm" @bind-Value="Verification.SelectedHashingAlgorithm" Variant="Variant.Outlined">
-                @foreach (var hash in SignatureOptions.AvailableHashingAlgorithms)
+             <div style="height: 10px;"></div>
+                <MudTextField @bind-Value="Verification.UserSignature" Lines="5" FullWidth="true" Variant="Variant.Outlined" Label="Input digital signature (Base64)"></MudTextField>
+                <ValidationMessage For="@(() => Verification.UserSignature)"></ValidationMessage>
+                <div style="height: 20px;"></div>
+
+                <MudRadioGroup @bind-SelectedOption="Verification.IsFile">
+                    <MudRadio Option="false" Color="Color.Primary">Text</MudRadio>
+                    <MudRadio Option="true" Color="Color.Primary">File</MudRadio>
+                </MudRadioGroup>
+
+             <div style="height: 20px;"></div>
+
+                @if (Verification.IsFile)
                 {
-                    <MudSelectItem Value="@hash">@hash</MudSelectItem>
-                }
-            </MudSelect>
-            <ValidationMessage For="@(() => Verification.SelectedHashingAlgorithm)"></ValidationMessage>
-
-        <div style="height: 20px;"></div>
-
-        @if (Verification.SelectedAlgorithm == "RSA")
-        {
-                <MudSelect T="string" Label="Select RSA padding" @bind-Value="Verification.SelectedRSAPadding" Variant="Variant.Outlined">
-                    @foreach (var padding in SignatureOptions.RSAPadding)
-                {
-                    <MudSelectItem Value="@padding">@padding</MudSelectItem>
-                }
-            </MudSelect>
-            <ValidationMessage For="@(() => Verification.SelectedRSAPadding)"></ValidationMessage>
-        }
-
-        <div style="height: 20px;"></div>
-
-        <div class="form-group mb-3">
-            <label for="publicKeyUpload" class="btn btn-primary">Upload Public Key (.pem)</label>
-            <InputFile id="publicKeyUpload" OnChange="OnPublicKeyChange" style="display: none;" accept=".pem"/>
-            @if (!string.IsNullOrEmpty(Verification.UploadedPublicKeyName))
-            {
-                <span class="ml-3">@Verification.UploadedPublicKeyName</span>
-            }
-            else
-            {
-                <span class="ml-3">Key is empty</span>
-            }
-        </div>
-            <ValidationMessage For="@(() => Verification.PublicKeyData)"></ValidationMessage>
-
-        <div style="height: 10px;"></div>
-            <MudTextField @bind-Value="Verification.UserSignature" Lines="5" FullWidth="true" Variant="Variant.Outlined" Label="Input digital signature (Base64)"></MudTextField>
-            <ValidationMessage For="@(() => Verification.UserSignature)"></ValidationMessage>
-            <div style="height: 20px;"></div>
-
-            <MudRadioGroup @bind-SelectedOption="Verification.IsFile">
-                <MudRadio Option="false" Color="Color.Primary">Text</MudRadio>
-                <MudRadio Option="true" Color="Color.Primary">File</MudRadio>
-            </MudRadioGroup>
-
-        <div style="height: 20px;"></div>
-
-        @if (Verification.IsFile)
-        {
-            <div class="form-group mb-3">
-                <label for="verificationFileUpload" class="btn btn-primary">Upload File</label>
-                <InputFile id="verificationFileUpload" OnChange="OnVerificationFileChange" style="display: none;" />
-                @if (!string.IsNullOrEmpty(Verification.UploadedVerificationFileName))
-                {
-                        <span class="ml-3">@Verification.UploadedVerificationFileName</span>
-                }
-            </div>
+                    <div class="form-group mb-3">
+                        <label for="verificationFileUpload" class="btn btn-primary">Upload File</label>
+                        <InputFile id="verificationFileUpload" OnChange="OnVerificationFileChange" style="display: none;" />
+                        @if (!string.IsNullOrEmpty(Verification.UploadedVerificationFileName))
+                        {
+                                <span class="ml-3">@Verification.UploadedVerificationFileName</span>
+                        }
+                    </div>
             
-        }
-        else
-        {
-                <MudTextField @bind-Value="Verification.Text" Lines="5" FullWidth="true" Variant="Variant.Outlined" Label="Input text"></MudTextField>
-        }
+                }
+                else
+                {
+                        <MudTextField @bind-Value="Verification.Text" Lines="5" FullWidth="true" Variant="Variant.Outlined" Label="Input text"></MudTextField>
+                }
                 <ValidationMessage For="@(() => Verification.FileData)"></ValidationMessage>
                 <ValidationMessage For="@(() => Verification.Text)"></ValidationMessage>
 
-        <div style="height: 20px;"></div>
+             <div style="height: 20px;"></div>
 
-                <div style="display: flex; align-items: center;">
-                    <MudButton Disabled="@VerficationLoadingState" ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="mr-3">
-                        @if (VerficationLoadingState)
-                        {
-                            <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
-                            <span>Processing</span>
-                        }
-                        else
-                        {
-                            <span>Verify Signature</span>
-                        }
-                    </MudButton>
+                    <div style="display: flex; align-items: center;">
+                        <MudButton Disabled="@VerficationLoadingState" ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="mr-3">
+                            @if (VerficationLoadingState)
+                            {
+                                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                                <span>Processing</span>
+                            }
+                            else
+                            {
+                                <span>Verify Signature</span>
+                            }
+                        </MudButton>
 
-                    <MudButton OnClick="() => ClearData(false)" Variant="Variant.Filled" Color="Color.Error">Clear data</MudButton>
-                </div>
-                @if (Verification.VerificationStatus != null)
-                {
-                    <div style="height: 20px;"></div>
-                    <div>
-                        <MudText Typo="Typo.h6">Verification Result:</MudText>
-                        <MudText Color="@VerificationColor" Typo="Typo.body1">@Verification.VerificationStatus</MudText>
+                        <MudButton OnClick="() => ClearData(false)" Variant="Variant.Filled" Color="Color.Error">Clear data</MudButton>
                     </div>
-                }
+                    @if (Verification.VerificationStatus != null)
+                    {
+                        <div style="height: 20px;"></div>
+                        <div>
+                            <MudText Typo="Typo.h6">Verification Result:</MudText>
+                            <MudText Color="@VerificationColor" Typo="Typo.body1">@Verification.VerificationStatus</MudText>
+                        </div>
+                    }
 
-        </EditForm>
-    </MudCard>
+            </EditForm>
+    </MudPaper>
 
         <MudMessageBox @ref="mbox" Title="@MessageBoxTitle">
             <MessageContent>

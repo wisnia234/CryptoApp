@@ -14,9 +14,10 @@
 @inject HttpClient client
 @inject IBlazorDownloadFileService downloadService
 
-<h1>Create SSL Certificate</h1>
+@* <h1>Create SSL Certificate</h1> *@
 
-<MudCard Outlined="true" Style="padding: 16px;">
+<MudPaper Class="p-4" Elevation="3">
+    <h1>Create SSL Certificate</h1>
     <EditForm Model="State" OnValidSubmit="GenerateCert">
         <DataAnnotationsValidator />
 
@@ -230,7 +231,7 @@
             }       
 
      </EditForm>
-</MudCard>
+</MudPaper>
 
 <MudMessageBox @ref="mbox" Title="@MessageBoxTitle">
     <MessageContent>

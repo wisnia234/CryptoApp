@@ -11,17 +11,13 @@
 @inject HttpClient client
 @inject IBlazorDownloadFileService downloadService
 
-<div style="display: flex; justify-content: space-between; align-items: center;">
-    <h1>Encryption</h1>
-    <h1>Decryption</h1>
-</div>
-
 
 <div style="display: flex; justify-content: space-between;">
     <div style="flex: 1; margin-right: 10px;">
         <EditForm Model="EncryptionState" OnValidSubmit="EncryptData">
             <DataAnnotationsValidator />
-            <MudCard Outlined="true" Style="padding: 16px;">
+            <MudPaper Class="p-4" Elevation="3">
+                <h1>Encryption</h1>
                 <MudSelect T="string" Label="Select Encryption algorithm" Variant="Variant.Outlined" ValueChanged="(string value) => OnAlgorithmChanged(value, true)">
                     @foreach (var algo in EncryptionOptions.AvailableEncryptionAlgorithms)
                     {
@@ -110,12 +106,13 @@
                     </div>
                 }
 
-            </MudCard>
+            </MudPaper>
         </EditForm>
     </div>
 
     <div style="flex: 1; margin-left: 10px;">
-        <MudCard Outlined="true" Style="padding: 16px;">
+        <MudPaper Class="p-4" Elevation="3">
+            <h1>Decryption</h1>
             <EditForm Model="DecryptionState" OnValidSubmit="DecryptData">
                 <DataAnnotationsValidator />
                 
@@ -172,7 +169,7 @@
               <MudTextField Label="Password" @bind-Value="DecryptionState.Password" Variant="Variant.Outlined"
                               InputType="@DecryptionInputType" Adornment="Adornment.End"
                               AdornmentIcon="@DecryptionPasswordIcon" OnAdornmentClick="e => TogglePasswordVisibility(false)"></MudTextField>
-                <ValidationMessage For="@(()=>DecryptionState.Password)"></ValidationMessage>
+              <ValidationMessage For="@(()=>DecryptionState.Password)"></ValidationMessage>
 
                 <div style="height: 20px;"></div>
                 <MudButton Disabled="@DecryptLoadingState" ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="mr-3">
@@ -220,7 +217,7 @@
                 }
             </EditForm>
 
-        </MudCard>
+        </MudPaper>
     </div>
 
 </div>
