@@ -29,7 +29,7 @@ internal class EmailSender : IEmailSender
             Credentials = new NetworkCredential(emailSender, password)
         };
 
-        using var message = new MailMessage(emailSender, email)
+        using MailMessage message = new(emailSender, email)
         {
             Subject = subject,
             Body = htmlMessage,

@@ -26,15 +26,6 @@ internal static class Extensions
         services.AddRazorPages();
         return services;
     }
-
-    public static T GetOptions<T>(this IConfiguration configuration, string sectionName) where T : class, new()
-    {
-        var options = new T();
-        var section = configuration.GetRequiredSection(sectionName);
-        section.Bind(options);
-
-        return options;
-    }
     private static IServiceCollection AddCryptoServices(this IServiceCollection services)
     {
         services.AddScoped<IEncryptionService, EncryptionService>();
