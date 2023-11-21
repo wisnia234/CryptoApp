@@ -6,7 +6,6 @@ using CryptoApp.Server.Models;
 using CryptoApp.Server.Services;
 using CryptoApp.Server.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
@@ -32,7 +31,8 @@ internal static class Extensions
         services.AddScoped<ISignatureService, SignatureService>();
         services.AddScoped<ICertificateService, CertificateService>();
         services.AddSingleton<ExceptionMiddleware>();
-        services.AddScoped<IHashService, HashService>();
+        services.AddScoped<IHashService, BouncyCastleHashService>();
+        //services.AddScoped<IHashService, HashService>();
         return services;
     }
 

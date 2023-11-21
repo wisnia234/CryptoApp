@@ -67,10 +67,8 @@ internal class CertificateService : ICertificateService
                 throw new EmptyPasswordOrKeyException();
             }
 
-            if (!CertificateServiceUtills.ValidateIssuerSubjectKeyTypes(certRequest, issuerCertificate))
-            {
-                throw new InvalidIssuerAlgorithmKeyException();
-            }
+            CertificateServiceUtills.ValidateIssuer(certRequest, issuerCertificate);
+            CertificateServiceUtills.ValidateDateCertficates(issuerCertificate, notBefore, notAfter);
 
             var issuerKeyId = X509AuthorityKeyIdentifierExtension
                 .CreateFromIssuerNameAndSerialNumber(issuerCertificate.IssuerName, Encoding.UTF8.GetBytes(issuerCertificate.SerialNumber));

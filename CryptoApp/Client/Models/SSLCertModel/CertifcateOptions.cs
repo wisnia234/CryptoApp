@@ -81,5 +81,11 @@ internal static class CertifcateOptions
         ".cer"
     };
 
+    public static List<string> Algorithms => new() 
+    {
+        "SHA256", 
+        "SHA384", 
+        "SHA512" 
+    };
 
 }

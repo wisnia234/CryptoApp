@@ -1,4 +1,5 @@
-﻿using CryptoApp.Server.Services.Interfaces;
+﻿using CryptoApp.Server.Exceptions;
+using CryptoApp.Server.Services.Interfaces;
 using CryptoApp.Server.Utils;
 using CryptoApp.Shared.Commands;
 using CryptoApp.Shared.DTOs;
@@ -90,7 +91,7 @@ internal class SignatureService : ISignatureService
         }
         else
         {
-            throw new Exception("Wrong algorithm");
+            throw new AlgorithmNotExist($"{command.Algorithm} does not exist");
         }
 
         CryptographicOperations.ZeroMemory(command.Data);

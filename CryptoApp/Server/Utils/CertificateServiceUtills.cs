@@ -29,17 +29,6 @@ internal static class CertificateServiceUtills
 
         return certificate;
     }
-
-    public static bool ValidateIssuerSubjectKeyTypes(CertificateRequest subjectRequest, X509Certificate issuer)
-    {
-        Oid subjectAlgorithmOID = new(subjectRequest.PublicKey.Oid);
-        Oid issuerAlgorithmOID = new(issuer.GetKeyAlgorithm());
-
-        bool result = string.Equals(issuerAlgorithmOID.FriendlyName, subjectAlgorithmOID.FriendlyName);
-
-        return result;
-    }
-
     public static byte[] ExportCertificate(X509Certificate2 certificate, string certExtension, string? password) => certExtension switch
     {
         ".pem" => Encoding.UTF8.GetBytes(certificate.ExportCertificatePem()),
@@ -158,4 +147,64 @@ internal static class CertificateServiceUtills
             throw new AlgorithmNotExist(command.AsymetricCipher);
         }
     }
+
+    public static void ValidateDateCertficates(X509Certificate2 issuer, DateTimeOffset notBefore, DateTimeOffset notAfter)
+    {
+        if((issuer.NotBefore > notBefore)
+            || issuer.NotAfter < notAfter)
+        {
+            throw new SubjectDateIsNotInIssuerException();
+        }
+    }
+
+    public static void ValidateIssuer(CertificateRequest subjectRequest, X509Certificate2 x509Certificate)
+    {
+        if(!IsIssuerCA(x509Certificate))
+        {
+            throw new IssuerIsNotCAException();
+        }
+
+        if(!IsKeyCertSign(x509Certificate))
+        {
+            throw new KeyCertSignException();
+        }
+
+        if(!ValidateIssuerSubjectKeyTypes(subjectRequest, x509Certificate))
+        {
+            throw new InvalidIssuerAlgorithmKeyException();
+        }
+    }
+
+    private static bool IsIssuerCA(X509Certificate2 x509Certificate) => 
+        x509Certificate.Extensions
+        .OfType<X509BasicConstraintsExtension>()
+        .Select(x => x.CertificateAuthority)
+        .FirstOrDefault();
+
+
+    private static bool IsKeyCertSign(X509Certificate2 x509Certificate)
+    {
+
+        var aaa = x509Certificate.Extensions
+        .OfType<X509KeyUsageExtension>()
+        .Select(x => x.KeyUsages.ToString())
+        .FirstOrDefault();
+
+        var result = aaa
+        .Contains("KeyCertSign");
+
+        return result;
+    }
+        
+
+    private static bool ValidateIssuerSubjectKeyTypes(CertificateRequest subjectRequest, X509Certificate issuer)
+    {
+        Oid subjectAlgorithmOID = new(subjectRequest.PublicKey.Oid);
+        Oid issuerAlgorithmOID = new(issuer.GetKeyAlgorithm());
+
+        bool result = string.Equals(issuerAlgorithmOID.FriendlyName, subjectAlgorithmOID.FriendlyName);
+
+        return result;
+    }
+
 }

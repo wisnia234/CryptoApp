@@ -71,7 +71,7 @@
 
             <MudItem xs="6" md="6">
                 <MudSelect T="string" Label="Select hashing algorithm" @bind-Value="State.HashAlgorithm" Variant="Variant.Outlined">
-                    @foreach (var algo in HashOptions.Algorithms.Skip(2))
+                    @foreach (var algo in CertifcateOptions.Algorithms)
                     {
                         <MudSelectItem Value="@algo">@algo</MudSelectItem>
                     }
