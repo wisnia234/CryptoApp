@@ -14,17 +14,24 @@ internal static class CertificateServiceUtills
         string algorithmKeyName = keyAlgorithmOID.FriendlyName;
         string privateKeyPem = privateKey;
 
-        if (algorithmKeyName.Equals("ECC"))
+        try
         {
-            ECDsa eCDsa = ECDsa.Create();
-            eCDsa.ImportFromPem(privateKeyPem);
-            certificate = certificate.CopyWithPrivateKey(eCDsa);
+            if (algorithmKeyName.Equals("ECC"))
+            {
+                ECDsa eCDsa = ECDsa.Create();
+                eCDsa.ImportFromPem(privateKeyPem);
+                certificate = certificate.CopyWithPrivateKey(eCDsa);
+            }
+            else if (algorithmKeyName.Equals("RSA"))
+            {
+                RSA rsa = RSA.Create();
+                rsa.ImportFromPem(privateKeyPem);
+                certificate = certificate.CopyWithPrivateKey(rsa);
+            }
         }
-        else if (algorithmKeyName.Equals("RSA"))
+        catch (ArgumentException) 
         {
-            RSA rsa = RSA.Create();
-            rsa.ImportFromPem(privateKeyPem);
-            certificate = certificate.CopyWithPrivateKey(rsa);
+            throw new InvalidAsymmetricKeysException();
         }
 
         return certificate;
@@ -175,12 +182,10 @@ internal static class CertificateServiceUtills
         }
     }
 
-    private static bool IsIssuerCA(X509Certificate2 x509Certificate) => 
+    private static bool IsIssuerCA(X509Certificate2 x509Certificate) =>
         x509Certificate.Extensions
             .OfType<X509BasicConstraintsExtension>()
-            .Select(x => x.CertificateAuthority)
-            .FirstOrDefault();
-
+            .Any(x => x.CertificateAuthority);
 
     private static bool IsKeyCertSign(X509Certificate2 x509Certificate) =>
         x509Certificate.Extensions
