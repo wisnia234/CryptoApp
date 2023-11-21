@@ -177,25 +177,16 @@ internal static class CertificateServiceUtills
 
     private static bool IsIssuerCA(X509Certificate2 x509Certificate) => 
         x509Certificate.Extensions
-        .OfType<X509BasicConstraintsExtension>()
-        .Select(x => x.CertificateAuthority)
-        .FirstOrDefault();
+            .OfType<X509BasicConstraintsExtension>()
+            .Select(x => x.CertificateAuthority)
+            .FirstOrDefault();
 
 
-    private static bool IsKeyCertSign(X509Certificate2 x509Certificate)
-    {
+    private static bool IsKeyCertSign(X509Certificate2 x509Certificate) =>
+        x509Certificate.Extensions
+            .OfType<X509KeyUsageExtension>()
+            .Any(extension => extension.KeyUsages.HasFlag(X509KeyUsageFlags.KeyCertSign));
 
-        var aaa = x509Certificate.Extensions
-        .OfType<X509KeyUsageExtension>()
-        .Select(x => x.KeyUsages.ToString())
-        .FirstOrDefault();
-
-        var result = aaa
-        .Contains("KeyCertSign");
-
-        return result;
-    }
-        
 
     private static bool ValidateIssuerSubjectKeyTypes(CertificateRequest subjectRequest, X509Certificate issuer)
     {
