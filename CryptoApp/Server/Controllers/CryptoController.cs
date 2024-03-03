@@ -27,90 +27,43 @@ public class CryptoController : ControllerBase
     [HttpPost("hash")]
     public ActionResult<string> GenerateHash([FromBody] HashCommand command)
     {
-        try
-        { 
-            var result = _hashService.GenerateHash(command);
-            return Ok(result);
-        }
-        catch(Exception ex)
-        {
-            return BadRequest(ex.Message);
-        }
-        
+        var result = _hashService.GenerateHash(command);
+        return Ok(result);
     }
 
     [HttpPost("sign")] 
     public ActionResult<SignatureAndKeysDTO> GenerateSignature([FromBody] SignatureCommand command)
-    {
-        try
-        {
-            var result = _signatureService.GenerateSignature(command);
-            return Ok(result);
-        }
-        catch (Exception ex) 
-        {
-            return BadRequest(ex.Message);
-        }
-                
+    {  
+        var result = _signatureService.GenerateSignature(command);
+        return Ok(result);         
     }
 
     [HttpPost("verify")]
     public ActionResult<bool> VerifySignature([FromBody] VerificationCommand command)
     {
-        try
-        {
-            var verify = _signatureService.VerifySignature(command);
-            return Ok(verify);
-        }
-        catch (Exception ex) 
-        {
-            return BadRequest(ex.Message);
-        }
-        
+        var verify = _signatureService.VerifySignature(command);
+        return Ok(verify);  
     }
 
     [HttpPost("encrypt")]
     public ActionResult<string> EncryptData([FromBody] EncryptionCommand command)
     {
-        try
-        {
-            string result = _encryptionService.SymetricAlgorithmOperation(command);
-            return Ok(result);
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(ex.Message);
-        }
+        string result = _encryptionService.SymetricAlgorithmOperation(command);
+        return Ok(result);
     }
 
     [HttpPost("decrypt")]
     public ActionResult<string> DecryptData([FromBody] DecryptionCommand command)
     {
-        try
-        {
-            string result = _encryptionService.SymetricAlgorithmOperation(command);
-            return Ok(result);
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(ex.Message);
-        }
+         string result = _encryptionService.SymetricAlgorithmOperation(command);
+         return Ok(result);
     }
 
     [HttpPost("certificate")]
     public ActionResult<CertificateAndKeyDTO> GenerateCertficate([FromBody] CertificateCommand command)
     {
-        
-        try
-        {
-            var result = _certificateService.GenerateCertificate(command);
-            return Ok(result);
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(ex.Message);
-        }
+        var result = _certificateService.GenerateCertificate(command);
+        return Ok(result);
     }
-
 
 }

@@ -31,8 +31,8 @@ internal static class Extensions
         services.AddScoped<ISignatureService, SignatureService>();
         services.AddScoped<ICertificateService, CertificateService>();
         services.AddSingleton<ExceptionMiddleware>();
+        services.AddScoped<IHashService, HashService>();
         services.AddScoped<IHashService, BouncyCastleHashService>();
-        //services.AddScoped<IHashService, HashService>();
         return services;
     }
 

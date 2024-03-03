@@ -56,6 +56,11 @@ internal class CertificateService : ICertificateService
             if (!string.IsNullOrEmpty(command.IssuerCertificatePassword))
             {
                 issuerCertificate = new(command.IssuerCertificateData, command.IssuerCertificatePassword);
+
+                if(issuerCertificate.PrivateKey is null)
+                {
+                    throw new PasswordCertDoesNotContainKeyException();
+                }
             }
             else if(command.IssuerPrivateKey.Length > 0)
             {

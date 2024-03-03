@@ -20,7 +20,7 @@ internal class EncryptionService : IEncryptionService
         byte[] salt = CryptoServiceUtills.GenerateSaltBytes(128);
         byte[] plainBytes = command.ContentData;
 
-        using Rfc2898DeriveBytes rfcDeriveBytes = new(command.Password, salt, 100_000, HashAlgorithmName.SHA256);
+        using Rfc2898DeriveBytes rfcDeriveBytes = new(command.Password, salt, 300_000, HashAlgorithmName.SHA256);
         using SymmetricAlgorithm symmetricAlgorithm = EncryptionServiceUtils.CreateSymmetricAlgorithm(command.Algorithm);
 
         if (command.Algorithm.Equals("AES"))
@@ -75,7 +75,8 @@ internal class EncryptionService : IEncryptionService
         Array.Copy(saltIVEncryptedBytes, 0, salt, 0, salt.Length);
         Array.Copy(saltIVEncryptedBytes, salt.Length, iv, 0, iv.Length);
         Array.Copy(saltIVEncryptedBytes, salt.Length + iv.Length, dataToDecrypt, 0, saltIVEncryptedBytes.Length - salt.Length - iv.Length);
-        using Rfc2898DeriveBytes rfcDeriveBytes = new(command.Password, salt, 100_000, HashAlgorithmName.SHA256);
+
+        using Rfc2898DeriveBytes rfcDeriveBytes = new(command.Password, salt, 300_000, HashAlgorithmName.SHA256);
         using SymmetricAlgorithm symmetricAlgorithm = EncryptionServiceUtils.CreateSymmetricAlgorithm(command.Algorithm);
 
         if (command.Algorithm.Equals("AES"))
